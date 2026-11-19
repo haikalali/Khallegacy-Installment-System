@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Khal Legacy | Stock Management</title>
+<style>
+:root{--bg:#f4f4f2;--white:#fff;--ink:#242320;--muted:#88867f;--line:#e9e7e1;--gold:#c6a45b;--goldlight:#e0c783;--dark:#1d1d1d;--green:#21865b;--red:#c64b4b;--amber:#b78328;--blue:#557da9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:12px}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:235px;background:var(--dark);color:#eee;padding:24px 15px;display:flex;flex-direction:column;z-index:5}.brand{padding:5px 12px 25px;border-bottom:1px solid #393939}.brand b{font-size:17px;letter-spacing:2px}.brand small{display:block;color:var(--goldlight);font-size:9px;letter-spacing:2px;margin-top:6px}.navlabel{color:#777;font-size:9px;letter-spacing:1.6px;margin:25px 12px 9px}.nav a{display:flex;gap:12px;align-items:center;padding:12px;border-radius:7px;text-decoration:none;color:#aaa;font-size:11px;margin:2px 0}.nav a.active,.nav a:hover{background:#c6a45b20;color:var(--goldlight)}.nav a.active{border-left:2px solid var(--gold);padding-left:10px}.ico{width:18px;text-align:center;font-size:15px}.sidefoot{margin-top:auto;border-top:1px solid #393939;padding:15px 10px 0;color:#777;font-size:9px;line-height:1.8}.logout{margin-top:10px;background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:9px;width:100%;text-align:left}.main{margin-left:235px;padding:25px 24px 45px;width:calc(100% - 235px);max-width:none;min-width:0}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;color:var(--muted);font-size:10px}.profile{display:flex;align-items:center;gap:9px;color:#555}.avatar{background:#e9dfc8;color:#755e2d;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;font-weight:bold}.heading{margin-bottom:22px}.headingbar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}.monthfilter{display:flex;align-items:center;gap:8px;white-space:nowrap}.monthfilter label{font-size:9px;color:var(--muted);font-weight:bold;letter-spacing:.7px}.monthfilter select{min-width:190px;min-height:42px;padding:11px 14px;font-size:12px;border-radius:8px;font-weight:600}.headingcopy{min-width:0}.eyebrow{color:var(--gold);font-size:9px;font-weight:bold;letter-spacing:2px}.heading h1{font-size:27px;margin:7px 0 5px;letter-spacing:-.7px}.heading p{margin:0;color:var(--muted);font-size:11px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:19px}.stat,.panel{background:var(--white);border:1px solid var(--line);border-radius:10px;box-shadow:0 7px 24px #17171708}.stat{padding:16px 18px;cursor:pointer;transition:.15s;border:1px solid var(--line)}.stat:hover{border-color:var(--gold);transform:translateY(-1px)}.stat.active{border-color:var(--gold);box-shadow:0 0 0 2px #c6a45b25}.statlabel{font-size:9px;color:var(--muted);letter-spacing:.5px}.num{font-size:27px;font-weight:750;margin:11px 0 3px}.stat small{font-size:9px;color:var(--muted)}.panel{margin-bottom:19px;overflow:hidden}.panelhead{padding:17px 19px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.panelhead h2{font-size:13px;margin:0}.panelhead p{font-size:10px;color:var(--muted);margin:5px 0 0}.filters{display:flex;gap:8px;padding:13px 17px;flex-wrap:wrap}.field{border:1px solid var(--line);border-radius:6px;background:#fff;padding:9px 10px;font-size:10px;outline:none;color:#444}.field:focus,textarea:focus{border-color:var(--gold)}.search{flex:1;min-width:210px}.tablewrap{width:100%;overflow-x:hidden}table{width:100%;table-layout:fixed;border-collapse:collapse;white-space:normal}th{background:#fbfbfa;color:#999;font-size:9px;letter-spacing:.6px;text-align:left;padding:12px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}td{padding:11px 8px;border-bottom:1px solid #f0efeb;font-size:10px;color:#4b4943;overflow-wrap:anywhere;vertical-align:middle}th{padding:11px 8px;overflow-wrap:anywhere}tbody tr.data-row{cursor:pointer}tbody tr.data-row:hover{background:#fcfaf5}.primary{font-weight:750;color:#292824}.small{display:block;color:#999;font-size:9px;margin-top:4px}.pill{display:inline-block;border-radius:20px;padding:5px 8px;font-size:9px;font-weight:bold}.ready{background:#eaf5ef;color:var(--green)}.nostock{background:#faeeee;color:var(--red)}.transit{background:#fbf3e3;color:var(--amber)}.pending{background:#f0f0ee;color:#777}.blue{background:#edf2f8;color:var(--blue)}.cancelled{background:#f9e9e9;color:#a33b3b}.btn{border:0;border-radius:6px;padding:9px 14px;font-size:10px;font-weight:bold}.gold{background:var(--gold);color:#171717}.outline{background:#fff;border:1px solid var(--line);color:#555}.tablehint{padding:10px 17px;color:#999;font-size:9px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 17px;border-top:1px solid var(--line);background:#fff}.pageinfo{font-size:10px;color:#888}.pageactions{display:flex;align-items:center;gap:6px}.pagebtn{border:1px solid var(--line);background:#fff;color:#555;border-radius:5px;padding:7px 10px;font-size:10px}.pagebtn:disabled{opacity:.35;cursor:not-allowed}.pagecurrent{font-size:10px;color:#777;padding:0 6px}.empty{padding:25px;text-align:center;color:#999}.modalbg{display:none;position:fixed;inset:0;background:#0007;z-index:20;align-items:center;justify-content:center;padding:15px}.modalbg.show{display:flex}.modal{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 25px 80px #0004}.modalhead{padding:18px 21px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modalhead h3{font-size:15px;margin:0}.x{border:0;border-radius:50%;width:28px;height:28px;background:#f1f0ed}.modalbody{padding:20px 21px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.fg label{display:block;font-size:9px;font-weight:bold;color:#777;margin-bottom:6px;letter-spacing:.3px}.fg input,.fg select,.fg textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:11px;background:#fff;outline:none}.fg textarea{min-height:68px;resize:vertical}.fg.full{grid-column:1/-1}.readonly{background:#f7f6f3!important;color:#777}.modalfoot{border-top:1px solid var(--line);padding:14px 21px;display:flex;justify-content:space-between;align-items:center}.footright{display:flex;gap:8px}.section{font-size:9px;color:var(--gold);letter-spacing:1.3px;font-weight:bold;margin:19px 0 10px}.change-item{border-left:2px solid #d9c99f;margin:0 0 12px 5px;padding:0 0 5px 13px;position:relative}.change-item:before{content:"";position:absolute;left:-4px;top:2px;width:6px;height:6px;border-radius:50%;background:var(--gold)}.change-item b{font-size:10px}.change-item p{margin:4px 0;color:#666;font-size:10px}.change-item small{color:#999;font-size:9px}.toast{display:none;position:fixed;right:20px;bottom:20px;background:#222;color:#fff;padding:12px 16px;border-radius:7px;z-index:40;font-size:10px}.toast.show{display:block}.note{color:#999;font-size:9px;line-height:1.5;margin-top:8px}
+@media(max-width:1000px){.sidebar{width:205px}.main{margin-left:205px;padding:22px}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Fit the complete customer table to the available window width */
+#customerRows{}
+.tablewrap table th:nth-child(1),.tablewrap table td:nth-child(1){width:4%}
+.tablewrap table th:nth-child(2),.tablewrap table td:nth-child(2){width:7%}
+.tablewrap table th:nth-child(3),.tablewrap table td:nth-child(3){width:12%}
+.tablewrap table th:nth-child(4),.tablewrap table td:nth-child(4){width:7%}
+.tablewrap table th:nth-child(5),.tablewrap table td:nth-child(5){width:10%}
+.tablewrap table th:nth-child(6),.tablewrap table td:nth-child(6){width:6%}
+.tablewrap table th:nth-child(7),.tablewrap table td:nth-child(7){width:9%}
+.tablewrap table th:nth-child(8),.tablewrap table td:nth-child(8){width:10%}
+.tablewrap table th:nth-child(9),.tablewrap table td:nth-child(9){width:9%}
+.tablewrap table th:nth-child(10),.tablewrap table td:nth-child(10){width:8%}
+.tablewrap table th:nth-child(11),.tablewrap table td:nth-child(11){width:8%}
+.tablewrap table th:nth-child(12),.tablewrap table td:nth-child(12){width:10%}
+.remark-cell{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.4;max-height:2.8em;color:#777}
+@media(max-width:1100px){.main{padding-left:15px;padding-right:15px}.tablewrap table th,.tablewrap table td{font-size:9px;padding:8px 5px}.tablewrap .pill{font-size:8px;padding:4px 5px}.tablewrap .btn{font-size:8px;padding:7px 6px}}
+@media(max-width:680px){.headingbar{align-items:flex-start;flex-direction:column}.monthfilter{width:100%}.monthfilter select{flex:1}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.sidebar{width:60px;padding:16px 6px}.brand{padding:6px 0 18px;text-align:center}.brand b{font-size:9px;letter-spacing:0}.brand small,.navlabel,.navtext,.sidefoot .foottext{display:none}.nav a{justify-content:center;padding:12px 4px}.nav a.active{padding-left:2px}.main{margin-left:60px;padding:17px 12px}.heading h1{font-size:23px}.stats{gap:8px}.stat{padding:12px}.num{font-size:23px}.top{margin-bottom:20px}.profile span{display:none}.grid{grid-template-columns:1fr}.fg.full{grid-column:auto}.modalfoot{gap:10px}.footright{margin-left:auto}}
+</style></head>
+<body><div class="app">
+<aside class="sidebar"><div class="brand"><b>KHAL LEGACY</b><small>INSTALLMENT SYSTEM</small></div>
+<div class="navlabel">MAIN MENU</div><nav class="nav">
+<a href="#"><span class="ico">▦</span><span class="navtext">Dashboard</span></a><a href="#"><span class="ico">＋</span><span class="navtext">New Application</span></a><a class="active" href="#"><span class="ico">▣</span><span class="navtext">Stock Management</span></a><a href="#"><span class="ico">▤</span><span class="navtext">Agreement Management</span></a><a href="#"><span class="ico">⇧</span><span class="navtext">Sales Submission</span></a><a href="#"><span class="ico">⇢</span><span class="navtext">JCL Dispatch</span></a><a href="#"><span class="ico">▧</span><span class="navtext">JCL Claim</span></a><a href="#"><span class="ico">≋</span><span class="navtext">Reconciliation</span></a></nav>
+<div class="navlabel">SYSTEM</div><nav class="nav"><a href="#"><span class="ico">◷</span><span class="navtext">Activity History</span></a><a href="#"><span class="ico">⚙</span><span class="navtext">Settings</span></a></nav>
+<div class="sidefoot"><div class="foottext">KHAL LEGACY SYSTEM<br>Version 1.0.0</div><button class="logout" onclick="alert('Demo sahaja — belum disambungkan kepada authentication.')">↪ &nbsp; Log Out</button></div></aside>
+<main class="main"><div class="top"><span>Main Menu&nbsp; / &nbsp;<b>Stock Management</b></span><div class="profile"><div class="avatar">SA</div><span>Sales Admin</span></div></div>
+<div class="heading"><div class="headingbar"><div class="headingcopy"><div class="eyebrow">OPERATIONS / STOCK</div><h1>Stock Management</h1><p>Semak status stok, pilihan warna dan pengesahan customer sebelum serahan kepada branch.</p></div><div class="monthfilter"><label for="monthFilter">FILTER MONTH</label><select class="field" id="monthFilter" onchange="render()"><option value="">All Months</option></select></div></div></div>
+<div class="stats">
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('NOT YET CHECKING')"><div class="statlabel">NOT YET CHECKING</div><div class="num" id="notCheckingCount">0</div><small>Stok belum diperiksa</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('READY')"><div class="statlabel">STOCK READY</div><div class="num" id="readyCount">0</div><small>Produk customer tersedia</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('NO STOCK')"><div class="statlabel">NO STOCK</div><div class="num" id="noCount">0</div><small>Produk belum tersedia</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('IN TRANSIT')"><div class="statlabel">IN TRANSIT</div><div class="num" id="transitCount">0</div><small>Stok dalam penghantaran</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('STOK OTW')"><div class="statlabel">STOK OTW</div><div class="num" id="stokOtwCount">0</div><small>Stok sedang dalam perjalanan</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('PENDING')"><div class="statlabel">PENDING CUSTOMER</div><div class="num" id="pendingCount">0</div><small>Menunggu keputusan / pengesahan</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('CONFIRMED')"><div class="statlabel">CONFIRMED CUSTOMER</div><div class="num" id="confirmedCount">0</div><small>Customer sahkan collection</small></div>
+<div class="stat" role="button" tabindex="0" onclick="setStatFilter('STOCK PASSED')"><div class="statlabel">STOK PASSED</div><div class="num" id="passedCount">0</div><small>Stok telah dipass ke branch</small></div>
+</div>
+<section class="panel"><div class="panelhead"><div><h2>Customer Stock List</h2><p>Permohonan yang telah lulus akan muncul di sini secara automatik.</p></div></div>
+<div class="filters"><input class="field search" id="search" placeholder="Cari nama customer, CASE ID atau product..." oninput="render()"><select class="field" id="stockFilter" onchange="clearStatFilter();render()"><option value="">All Stock Status</option><option>NOT YET CHECKING</option><option>READY</option><option>NO STOCK</option><option>IN TRANSIT</option><option>STOK OTW</option></select><select class="field" id="branchFilter" onchange="render()"><option value="">All Branch Pickup</option><option>Parit Raja</option><option>Johor Bahru</option><option>Kluang</option><option>Ipoh</option><option>Pontian</option><option>Muar</option><option>Kulai</option><option>POSTAGE</option></select></div>
+<div class="tablewrap"><table><thead><tr><th>BIL.</th><th>APPROVAL DATE</th><th>NAMA CUSTOMER</th><th>BRANCH PICKUP</th><th>PRODUCT</th><th>COLOUR</th><th>STOK STATUS</th><th>CUSTOMER DECISION</th><th>COLLECTION CONFIRMATION</th><th>DATE PASS STOK</th><th>ACTION</th><th>REMARK</th></tr></thead><tbody id="customerRows"></tbody></table></div>
+<div class="pagination"><div class="pageinfo" id="pageInfo">Memaparkan 0–0 daripada 0 customer</div><div class="pageactions"><button class="pagebtn" id="prevPage" onclick="changePage(-1)" disabled>Previous</button><span class="pagecurrent" id="pageCurrent">Page 1 / 1</span><button class="pagebtn" id="nextPage" onclick="changePage(1)" disabled>Next</button></div></div><div class="tablehint">Klik mana-mana row customer untuk membuka Follow-up Card dan mengemas kini maklumat. Maksimum 30 customer dipaparkan pada setiap halaman.</div></section>
+
+</main></div>
+
+<div class="modalbg" id="cardBg"><div class="modal"><div class="modalhead"><div><h3>Customer Follow-up Card</h3><div class="note" id="cardSub"></div></div><button class="x" onclick="closeCard()">×</button></div>
+<div class="modalbody"><div class="grid">
+<div class="fg"><label>APPROVAL DATE</label><input id="cApproval" class="readonly" readonly></div><div class="fg"><label>CASE ID</label><input id="cCase" class="readonly" readonly></div>
+<div class="fg"><label>CUSTOMER NAME</label><input id="cName" class="readonly" readonly></div><div class="fg"><label>CUSTOMER FROM BRANCH</label><select id="cFrom"><option>Parit Raja</option><option>Johor Bahru</option><option>Kluang</option><option>Ipoh</option><option>Pontian</option><option>Muar</option><option>Kulai</option><option>WEB</option></select></div>
+<div class="fg"><label>BRANCH PICKUP</label><select id="cPickup"><option>Parit Raja</option><option>Johor Bahru</option><option>Kluang</option><option>Ipoh</option><option>Pontian</option><option>Muar</option><option>Kulai</option><option>POSTAGE</option></select></div><div class="fg"><label>PRODUCT</label><input id="cProduct" class="readonly" readonly></div>
+<div class="fg"><label>COLOUR (MANUAL INPUT)</label><input id="cColour" placeholder="Masukkan warna pilihan / warna akhir"></div>
+<div class="fg"><label>STOCK STATUS</label><select id="cStock"><option>NOT YET CHECKING</option><option>READY</option><option>NO STOCK</option><option>IN TRANSIT</option><option>STOK OTW</option></select></div>
+<div class="fg"><label>CUSTOMER DECISION</label><select id="cDecision"><option>PENDING DECISION</option><option>ACCEPT</option><option>WAIT ORIGINAL COLOUR</option><option>WAIT ALTERNATIVE COLOUR</option><option>CANCELLED</option></select></div>
+<div class="fg"><label>COLLECTION CONFIRMATION</label><select id="cCollection"><option>PENDING</option><option>CONFIRMED</option></select></div>
+<div class="fg"><label>DATE PASS STOK</label><input type="date" id="cPassDate"></div>
+<div class="fg full"><label>REMARK</label><textarea id="cRemark" placeholder="Masukkan catatan berkaitan stok atau keputusan customer..."></textarea></div>
+</div>
+<div class="section">CHANGE HISTORY</div><div id="changeHistory"><div class="empty">Tiada perubahan direkodkan.</div></div>
+<div class="note">Setiap perubahan yang disimpan akan direkodkan bersama nilai sebelum dan selepas, tarikh, masa dan staff. Rekod ini ialah sejarah perubahan, bukan follow-up history.</div>
+</div>
+<div class="modalfoot"><button class="btn outline" onclick="closeCard()">Close</button><div class="footright"><button class="btn gold" onclick="saveCard()">Save</button></div></div>
+</div></div>
+<div class="modalbg" id="passBg"><div class="modal" style="max-width:430px"><div class="modalhead"><h3>Pass Stok to Branch</h3><button class="x" onclick="closePass()">×</button></div><div class="modalbody"><div id="passInfo" style="font-size:11px;line-height:1.8;margin-bottom:15px"></div><div class="fg"><label>DATE PASS STOK</label><input type="date" id="passDate"></div><div class="note">Sahkan tarikh stok diserahkan / dipass kepada branch pickup.</div></div><div class="modalfoot"><button class="btn outline" onclick="closePass()">Close</button><div class="footright"><button class="btn gold" onclick="savePass()">Confirm Pass</button></div></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* Demo data. In production, this list is populated automatically from approved New Applications. */
+let customers=[
+  {
+    "id": 1,
+    "approval": "03/11/2026",
+    "name": "Amirul Hakim",
+    "case": "KL-2026-001",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "iPhone 16 Plus 128GB",
+    "colour": "Deep Blue",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 2,
+    "approval": "05/11/2026",
+    "name": "Nur Aisyah",
+    "case": "KL-2026-002",
+    "from": "Kulai",
+    "pickup": "Pontian",
+    "product": "iPhone 16 128GB",
+    "colour": "Sage",
+    "stock": "READY",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 3,
+    "approval": "07/11/2026",
+    "name": "Muhammad Firdaus",
+    "case": "KL-2026-003",
+    "from": "Kluang",
+    "pickup": "Kluang",
+    "product": "iPhone 17 Pro 256GB",
+    "colour": "Desert Titanium",
+    "stock": "NO STOCK",
+    "decision": "ACCEPT",
+    "collection": "CONFIRMED",
+    "remark": "Warna pilihan belum tersedia. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 4,
+    "approval": "09/11/2026",
+    "name": "Siti Mariam",
+    "case": "KL-2026-004",
+    "from": "Muar",
+    "pickup": "Parit Raja",
+    "product": "Xiaomi 15 256GB",
+    "colour": "Cosmic Orange",
+    "stock": "IN TRANSIT",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 5,
+    "approval": "11/11/2026",
+    "name": "Daniel Tan",
+    "case": "KL-2026-005",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "Samsung Galaxy S25 256GB",
+    "colour": "Natural Titanium",
+    "stock": "STOK OTW",
+    "decision": "CANCELLED",
+    "collection": "PENDING",
+    "remark": "Customer membatalkan permohonan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 6,
+    "approval": "13/11/2026",
+    "name": "Nur Izzati",
+    "case": "KL-2026-006",
+    "from": "Pontian",
+    "pickup": "Ipoh",
+    "product": "iPhone 17 256GB",
+    "colour": "Midnight",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Menunggu staff membuat semakan stok. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 7,
+    "approval": "15/11/2026",
+    "name": "Haziq Rahman",
+    "case": "KL-2026-007",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "iPhone 17 Air 256GB",
+    "colour": "Silver",
+    "stock": "READY",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 8,
+    "approval": "01/11/2026",
+    "name": "Aina Sofea",
+    "case": "KL-2026-008",
+    "from": "Ipoh",
+    "pickup": "POSTAGE",
+    "product": "iPhone 17 Pro Max 512GB",
+    "colour": "White",
+    "stock": "NO STOCK",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Warna pilihan belum tersedia.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 9,
+    "approval": "03/11/2026",
+    "name": "Mohd Danish",
+    "case": "KL-2026-009",
+    "from": "WEB",
+    "pickup": "Pontian",
+    "product": "iPhone 16 Pro 256GB",
+    "colour": "Pink",
+    "stock": "IN TRANSIT",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Stok sedang dihantar oleh supplier. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 10,
+    "approval": "05/11/2026",
+    "name": "Farah Nabila",
+    "case": "KL-2026-010",
+    "from": "Kluang",
+    "pickup": "Kluang",
+    "product": "iPhone 17 Pro Max 256GB",
+    "colour": "Black",
+    "stock": "STOK OTW",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 11,
+    "approval": "07/11/2026",
+    "name": "Adam Hakimi",
+    "case": "KL-2026-011",
+    "from": "Muar",
+    "pickup": "Parit Raja",
+    "product": "iPhone 16 Plus 128GB",
+    "colour": "Deep Blue",
+    "stock": "NOT YET CHECKING",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 12,
+    "approval": "09/11/2026",
+    "name": "Nur Syafiqah",
+    "case": "KL-2026-012",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "iPhone 16 128GB",
+    "colour": "Sage",
+    "stock": "READY",
+    "decision": "PENDING DECISION",
+    "collection": "CONFIRMED",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya.",
+    "passDate": "2026-11-13",
+    "changes": []
+  },
+  {
+    "id": 13,
+    "approval": "11/11/2026",
+    "name": "Afiq Iskandar",
+    "case": "KL-2026-013",
+    "from": "Pontian",
+    "pickup": "Ipoh",
+    "product": "iPhone 17 Pro 256GB",
+    "colour": "Desert Titanium",
+    "stock": "NO STOCK",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Warna pilihan belum tersedia. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 14,
+    "approval": "13/11/2026",
+    "name": "Chong Wei Jian",
+    "case": "KL-2026-014",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "Xiaomi 15 256GB",
+    "colour": "Cosmic Orange",
+    "stock": "IN TRANSIT",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 15,
+    "approval": "15/11/2026",
+    "name": "Saraswathy Devi",
+    "case": "KL-2026-015",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "Samsung Galaxy S25 256GB",
+    "colour": "Natural Titanium",
+    "stock": "STOK OTW",
+    "decision": "ACCEPT",
+    "collection": "CONFIRMED",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 16,
+    "approval": "01/11/2026",
+    "name": "Ahmad Luqman",
+    "case": "KL-2026-016",
+    "from": "Kulai",
+    "pickup": "POSTAGE",
+    "product": "iPhone 17 256GB",
+    "colour": "Midnight",
+    "stock": "NOT YET CHECKING",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 17,
+    "approval": "03/11/2026",
+    "name": "Nadia Amira",
+    "case": "KL-2026-017",
+    "from": "Kluang",
+    "pickup": "Kluang",
+    "product": "iPhone 17 Air 256GB",
+    "colour": "Silver",
+    "stock": "READY",
+    "decision": "CANCELLED",
+    "collection": "PENDING",
+    "remark": "Customer membatalkan permohonan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 18,
+    "approval": "05/11/2026",
+    "name": "Muhammad Arif",
+    "case": "KL-2026-018",
+    "from": "WEB",
+    "pickup": "Parit Raja",
+    "product": "iPhone 17 Pro Max 512GB",
+    "colour": "White",
+    "stock": "NO STOCK",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Warna pilihan belum tersedia. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 19,
+    "approval": "07/11/2026",
+    "name": "Lim Jia Hui",
+    "case": "KL-2026-019",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "iPhone 16 Pro 256GB",
+    "colour": "Pink",
+    "stock": "IN TRANSIT",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 20,
+    "approval": "09/11/2026",
+    "name": "Nurul Huda",
+    "case": "KL-2026-020",
+    "from": "Pontian",
+    "pickup": "Ipoh",
+    "product": "iPhone 17 Pro Max 256GB",
+    "colour": "Black",
+    "stock": "STOK OTW",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 21,
+    "approval": "11/11/2026",
+    "name": "Rizal Hakim",
+    "case": "KL-2026-021",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "iPhone 16 Plus 128GB",
+    "colour": "Deep Blue",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Menunggu staff membuat semakan stok. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 22,
+    "approval": "13/11/2026",
+    "name": "Puteri Balqis",
+    "case": "KL-2026-022",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "iPhone 16 128GB",
+    "colour": "Sage",
+    "stock": "READY",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 23,
+    "approval": "15/11/2026",
+    "name": "Syed Imran",
+    "case": "KL-2026-023",
+    "from": "Kulai",
+    "pickup": "Pontian",
+    "product": "iPhone 17 Pro 256GB",
+    "colour": "Desert Titanium",
+    "stock": "NO STOCK",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Warna pilihan belum tersedia. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 24,
+    "approval": "01/11/2026",
+    "name": "Tan Mei Ling",
+    "case": "KL-2026-024",
+    "from": "Kluang",
+    "pickup": "POSTAGE",
+    "product": "Xiaomi 15 256GB",
+    "colour": "Cosmic Orange",
+    "stock": "IN TRANSIT",
+    "decision": "PENDING DECISION",
+    "collection": "CONFIRMED",
+    "remark": "Stok sedang dihantar oleh supplier.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 25,
+    "approval": "03/11/2026",
+    "name": "Aqil Zafran",
+    "case": "KL-2026-025",
+    "from": "Muar",
+    "pickup": "Parit Raja",
+    "product": "Samsung Galaxy S25 256GB",
+    "colour": "Natural Titanium",
+    "stock": "STOK OTW",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 26,
+    "approval": "05/11/2026",
+    "name": "Amirah Husna",
+    "case": "KL-2026-026",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "iPhone 17 256GB",
+    "colour": "Midnight",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 27,
+    "approval": "07/11/2026",
+    "name": "Harith Danish",
+    "case": "KL-2026-027",
+    "from": "WEB",
+    "pickup": "Ipoh",
+    "product": "iPhone 17 Air 256GB",
+    "colour": "Silver",
+    "stock": "READY",
+    "decision": "ACCEPT",
+    "collection": "CONFIRMED",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 28,
+    "approval": "09/11/2026",
+    "name": "Kavitha Raj",
+    "case": "KL-2026-028",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "iPhone 17 Pro Max 512GB",
+    "colour": "White",
+    "stock": "NO STOCK",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Warna pilihan belum tersedia.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 29,
+    "approval": "11/11/2026",
+    "name": "Mohd Azlan",
+    "case": "KL-2026-029",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "iPhone 16 Pro 256GB",
+    "colour": "Pink",
+    "stock": "IN TRANSIT",
+    "decision": "CANCELLED",
+    "collection": "PENDING",
+    "remark": "Customer membatalkan permohonan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 30,
+    "approval": "13/11/2026",
+    "name": "Siti Khadijah",
+    "case": "KL-2026-030",
+    "from": "Kulai",
+    "pickup": "Pontian",
+    "product": "iPhone 17 Pro Max 256GB",
+    "colour": "Black",
+    "stock": "STOK OTW",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 31,
+    "approval": "15/11/2026",
+    "name": "Jason Lee",
+    "case": "KL-2026-031",
+    "from": "Kluang",
+    "pickup": "Kluang",
+    "product": "iPhone 16 Plus 128GB",
+    "colour": "Deep Blue",
+    "stock": "NOT YET CHECKING",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 32,
+    "approval": "01/11/2026",
+    "name": "Nur Athirah",
+    "case": "KL-2026-032",
+    "from": "Muar",
+    "pickup": "POSTAGE",
+    "product": "iPhone 16 128GB",
+    "colour": "Sage",
+    "stock": "READY",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 33,
+    "approval": "03/11/2026",
+    "name": "Faris Iman",
+    "case": "KL-2026-033",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "iPhone 17 Pro 256GB",
+    "colour": "Desert Titanium",
+    "stock": "NO STOCK",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Warna pilihan belum tersedia. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 34,
+    "approval": "05/11/2026",
+    "name": "Alya Damia",
+    "case": "KL-2026-034",
+    "from": "Pontian",
+    "pickup": "Ipoh",
+    "product": "Xiaomi 15 256GB",
+    "colour": "Cosmic Orange",
+    "stock": "IN TRANSIT",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 35,
+    "approval": "07/11/2026",
+    "name": "Ramesh Kumar",
+    "case": "KL-2026-035",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "Samsung Galaxy S25 256GB",
+    "colour": "Natural Titanium",
+    "stock": "STOK OTW",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 36,
+    "approval": "09/11/2026",
+    "name": "Amir Hakim",
+    "case": "KL-2026-036",
+    "from": "WEB",
+    "pickup": "Kulai",
+    "product": "iPhone 17 256GB",
+    "colour": "Midnight",
+    "stock": "NOT YET CHECKING",
+    "decision": "PENDING DECISION",
+    "collection": "CONFIRMED",
+    "remark": "Menunggu staff membuat semakan stok.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 37,
+    "approval": "11/11/2026",
+    "name": "Nurin Balqis",
+    "case": "KL-2026-037",
+    "from": "Kulai",
+    "pickup": "Pontian",
+    "product": "iPhone 17 Air 256GB",
+    "colour": "Silver",
+    "stock": "READY",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 38,
+    "approval": "13/11/2026",
+    "name": "Irfan Hakimi",
+    "case": "KL-2026-038",
+    "from": "Kluang",
+    "pickup": "Kluang",
+    "product": "iPhone 17 Pro Max 512GB",
+    "colour": "White",
+    "stock": "NO STOCK",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Warna pilihan belum tersedia. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 39,
+    "approval": "15/11/2026",
+    "name": "Lee Xin Yi",
+    "case": "KL-2026-039",
+    "from": "Muar",
+    "pickup": "Parit Raja",
+    "product": "iPhone 16 Pro 256GB",
+    "colour": "Pink",
+    "stock": "IN TRANSIT",
+    "decision": "ACCEPT",
+    "collection": "CONFIRMED",
+    "remark": "Stok sedang dihantar oleh supplier. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 40,
+    "approval": "01/11/2026",
+    "name": "Hannah Sofea",
+    "case": "KL-2026-040",
+    "from": "Johor Bahru",
+    "pickup": "POSTAGE",
+    "product": "iPhone 17 Pro Max 256GB",
+    "colour": "Black",
+    "stock": "STOK OTW",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 41,
+    "approval": "03/11/2026",
+    "name": "Syafiq Azmi",
+    "case": "KL-2026-041",
+    "from": "Pontian",
+    "pickup": "Ipoh",
+    "product": "iPhone 16 Plus 128GB",
+    "colour": "Deep Blue",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 42,
+    "approval": "05/11/2026",
+    "name": "Aqilah Maisarah",
+    "case": "KL-2026-042",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "iPhone 16 128GB",
+    "colour": "Sage",
+    "stock": "READY",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer mahu tunggu warna asal.",
+    "passDate": "2026-11-13",
+    "changes": []
+  },
+  {
+    "id": 43,
+    "approval": "07/11/2026",
+    "name": "Muhammad Danial",
+    "case": "KL-2026-043",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "iPhone 17 Pro 256GB",
+    "colour": "Desert Titanium",
+    "stock": "NO STOCK",
+    "decision": "CANCELLED",
+    "collection": "PENDING",
+    "remark": "Customer membatalkan permohonan.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 44,
+    "approval": "09/11/2026",
+    "name": "Yap Jun Hao",
+    "case": "KL-2026-044",
+    "from": "Kulai",
+    "pickup": "Pontian",
+    "product": "Xiaomi 15 256GB",
+    "colour": "Cosmic Orange",
+    "stock": "IN TRANSIT",
+    "decision": "PENDING DECISION",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 45,
+    "approval": "11/11/2026",
+    "name": "Nabila Irdina",
+    "case": "KL-2026-045",
+    "from": "WEB",
+    "pickup": "Kluang",
+    "product": "Samsung Galaxy S25 256GB",
+    "colour": "Natural Titanium",
+    "stock": "STOK OTW",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "CONFIRMED",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 46,
+    "approval": "13/11/2026",
+    "name": "Faiz Zulkifli",
+    "case": "KL-2026-046",
+    "from": "Muar",
+    "pickup": "Parit Raja",
+    "product": "iPhone 17 256GB",
+    "colour": "Midnight",
+    "stock": "NOT YET CHECKING",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Menunggu staff membuat semakan stok. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 47,
+    "approval": "15/11/2026",
+    "name": "Nur Maisarah",
+    "case": "KL-2026-047",
+    "from": "Johor Bahru",
+    "pickup": "Muar",
+    "product": "iPhone 17 Air 256GB",
+    "colour": "Silver",
+    "stock": "READY",
+    "decision": "ACCEPT",
+    "collection": "PENDING",
+    "remark": "Stok tersedia. Menunggu pengesahan / tindakan seterusnya. Customer bersetuju dengan pilihan warna.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 48,
+    "approval": "01/11/2026",
+    "name": "Khalil Anwar",
+    "case": "KL-2026-048",
+    "from": "Pontian",
+    "pickup": "POSTAGE",
+    "product": "iPhone 17 Pro Max 512GB",
+    "colour": "White",
+    "stock": "NO STOCK",
+    "decision": "PENDING DECISION",
+    "collection": "CONFIRMED",
+    "remark": "Warna pilihan belum tersedia.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 49,
+    "approval": "03/11/2026",
+    "name": "Siti Amani",
+    "case": "KL-2026-049",
+    "from": "Parit Raja",
+    "pickup": "Johor Bahru",
+    "product": "iPhone 16 Pro 256GB",
+    "colour": "Pink",
+    "stock": "IN TRANSIT",
+    "decision": "WAIT ALTERNATIVE COLOUR",
+    "collection": "PENDING",
+    "remark": "Stok sedang dihantar oleh supplier. Customer sedang pertimbangkan warna alternatif.",
+    "passDate": "",
+    "changes": []
+  },
+  {
+    "id": 50,
+    "approval": "05/11/2026",
+    "name": "Arman Hakim",
+    "case": "KL-2026-050",
+    "from": "Ipoh",
+    "pickup": "Kulai",
+    "product": "iPhone 17 Pro Max 256GB",
+    "colour": "Black",
+    "stock": "STOK OTW",
+    "decision": "WAIT ORIGINAL COLOUR",
+    "collection": "PENDING",
+    "remark": "Supplier maklum stok sedang dalam perjalanan. Customer mahu tunggu warna asal.",
+    "passDate": "",
+    "changes": []
+  }
+];
+let activeId=null,passId=null;
+const el=id=>document.getElementById(id);
+function pill(s){let c=s==='READY'||s==='CONFIRMED'||s==='ACCEPT'?'ready':s==='NO STOCK'||s==='CANCELLED'?'nostock':s==='IN TRANSIT'||s.includes('WAIT')?'transit':'pending';return `<span class="pill ${c}">${s}</span>`}
+let activeStatFilter='';
+let currentPage=1;
+function approvalMonth(dateText){const parts=dateText.split('/');return parts.length===3?parts[2]+'-'+parts[1]:'';}
+function populateMonthFilter(){const select=el('monthFilter');const months=[...new Set(customers.map(x=>approvalMonth(x.approval)).filter(Boolean))].sort().reverse();select.innerHTML='<option value="">All Months</option>'+months.map(m=>{const [y,mo]=m.split('-');const label=new Date(Number(y),Number(mo)-1,1).toLocaleDateString('en-MY',{month:'long',year:'numeric'});return `<option value="${m}">${label}</option>`}).join('');}
+const pageSize=30;
+function changePage(direction){currentPage+=direction;render();}
+function resetPage(){currentPage=1;}
+function clearStatFilter(){activeStatFilter='';resetPage();document.querySelectorAll('.stat').forEach(x=>x.classList.remove('active'));}
+function setStatFilter(status){
+ resetPage();
+ activeStatFilter=activeStatFilter===status?'':status;
+ document.querySelectorAll('.stats .stat').forEach(x=>x.classList.toggle('active',x.getAttribute('onclick')?.includes("'"+activeStatFilter+"'")&&!!activeStatFilter));
+ el('stockFilter').value='';render();
+}
+function clearStatFilter(){activeStatFilter='';resetPage();document.querySelectorAll('.stat').forEach(x=>x.classList.remove('active'));}
+function render(){
+ let q=el('search').value.toLowerCase(),sf=el('stockFilter').value,bf=el('branchFilter').value,mf=el('monthFilter').value;
+ if(window._lastTableQuery!==q+'|'+sf+'|'+bf+'|'+mf+'|'+activeStatFilter){currentPage=1;window._lastTableQuery=q+'|'+sf+'|'+bf+'|'+mf+'|'+activeStatFilter;}
+ let list=customers.filter(x=>{
+  const statMatch=!activeStatFilter||(
+   activeStatFilter==='PENDING'?(x.collection!=='CONFIRMED'&&x.decision!=='CANCELLED'):
+   activeStatFilter==='CONFIRMED'?x.collection==='CONFIRMED':
+   activeStatFilter==='STOCK PASSED'?!!x.passDate:
+   activeStatFilter==='IN TRANSIT'?x.stock==='IN TRANSIT'&&x.decision!=='CANCELLED':
+   x.stock===activeStatFilter&&x.decision!=='CANCELLED');
+  return (!q||[x.case,x.name,x.product,x.colour].join(' ').toLowerCase().includes(q))&&(!sf||x.stock===sf)&&(!bf||x.pickup===bf)&&(!mf||approvalMonth(x.approval)===mf)&&statMatch;
+ });
+ const totalPages=Math.max(1,Math.ceil(list.length/pageSize));
+ currentPage=Math.min(Math.max(1,currentPage),totalPages);
+ const start=(currentPage-1)*pageSize;
+ const pageList=list.slice(start,start+pageSize);
+ el('customerRows').innerHTML=pageList.length?pageList.map((x,i)=>`<tr class="data-row" onclick="openCard(${x.id})"><td>${start+i+1}</td><td>${x.approval}</td><td><span class="primary">${x.name}</span><span class="small">${x.case} · ${x.from}</span></td><td>${x.pickup}</td><td>${x.product}</td><td>${x.colour||'—'}</td><td>${pill(x.stock)}</td><td>${pill(x.decision)}</td><td>${pill(x.collection)}</td><td>${x.passDate||'—'}</td><td>${x.stock==='READY'&&x.collection==='CONFIRMED'&&x.decision!=='CANCELLED'?(x.passDate?'<span class="pill ready">PASSED</span>':`<button class="btn gold" onclick="event.stopPropagation();openPass(${x.id})">Pass Stock</button>`):'<span class="small">—</span>'}</td><td><div class="remark-cell" title="${String(x.remark||'—').replace(/"/g,'&quot;')}">${x.remark||'—'}</div></td></tr>`).join(''):`<tr><td colspan="12" class="empty">Tiada rekod customer.</td></tr>`;
+ el('pageInfo').textContent=list.length?`Memaparkan ${start+1}–${Math.min(start+pageSize,list.length)} daripada ${list.length} customer`:'Memaparkan 0–0 daripada 0 customer';
+ el('pageCurrent').textContent=`Page ${currentPage} / ${totalPages}`;
+ el('prevPage').disabled=currentPage===1;
+ el('nextPage').disabled=currentPage===totalPages;
+ const monthCustomers=customers.filter(x=>!mf||approvalMonth(x.approval)===mf);
+ el('readyCount').textContent=monthCustomers.filter(x=>x.stock==='READY'&&x.decision!=='CANCELLED').length;
+ el('noCount').textContent=monthCustomers.filter(x=>x.stock==='NO STOCK'&&x.decision!=='CANCELLED').length;
+ el('transitCount').textContent=monthCustomers.filter(x=>x.stock==='IN TRANSIT'&&x.decision!=='CANCELLED').length;
+ el('stokOtwCount').textContent=monthCustomers.filter(x=>x.stock==='STOK OTW'&&x.decision!=='CANCELLED').length;
+ el('pendingCount').textContent=monthCustomers.filter(x=>x.collection!=='CONFIRMED'&&x.decision!=='CANCELLED').length;
+ el('notCheckingCount').textContent=monthCustomers.filter(x=>x.stock==='NOT YET CHECKING'&&x.decision!=='CANCELLED').length;
+ el('confirmedCount').textContent=monthCustomers.filter(x=>x.collection==='CONFIRMED'&&x.decision!=='CANCELLED').length;
+ el('passedCount').textContent=monthCustomers.filter(x=>!!x.passDate&&x.decision!=='CANCELLED').length;
+}
+
+function openCard(id){let x=customers.find(a=>a.id===id);activeId=id;
+ ['Approval','Case','Name','From','Pickup','Product'].forEach(k=>{let map={Approval:'approval',Case:'case',Name:'name',From:'from',Pickup:'pickup',Product:'product'};el('c'+k).value=x[map[k]]});
+ el('cColour').value=x.colour;el('cStock').value=x.stock;el('cDecision').value=x.decision;el('cCollection').value=x.collection;el('cPassDate').value=x.passDate||'';el('cRemark').value=x.remark;
+ el('cardSub').textContent=x.case+' · '+x.name+' · '+x.pickup;renderChanges(x);el('cardBg').classList.add('show')}
+function renderChanges(x){el('changeHistory').innerHTML=x.changes.length?x.changes.slice().reverse().map(c=>`<div class="change-item"><b>${c.field}</b><p>${c.before||'—'} → <b>${c.after||'—'}</b></p><small>${c.time} · ${c.staff}</small></div>`).join(''):'<div class="empty">Tiada perubahan direkodkan.</div>'}
+function closeCard(){el('cardBg').classList.remove('show')}
+function saveCard(){let x=customers.find(a=>a.id===activeId);let vals={from:el('cFrom').value,pickup:el('cPickup').value,colour:el('cColour').value.trim(),stock:el('cStock').value,decision:el('cDecision').value,collection:el('cCollection').value,passDate:el('cPassDate').value,remark:el('cRemark').value.trim()};if(vals.decision==='CANCELLED'&&!vals.remark){toast('Sila isi sebab cancellation dalam Remark.');return}if(vals.passDate&&!(vals.stock==='READY'&&vals.collection==='CONFIRMED'&&vals.decision!=='CANCELLED')){toast('Date Pass Stok hanya boleh diisi apabila Stock Status READY dan Collection Confirmation CONFIRMED.');return}
+ let labels={from:'Customer From Branch',pickup:'Branch Pickup',colour:'Colour',stock:'Stock Status',decision:'Customer Decision',collection:'Collection Confirmation',passDate:'Date Pass Stok',remark:'Remark'};
+ Object.keys(vals).forEach(k=>{let old=x[k]||'',neu=vals[k]||'';if(old!==neu){x.changes.push({field:labels[k],before:old,after:neu,time:new Date().toLocaleString('en-MY'),staff:'Current Staff'});x[k]=neu;}});
+ if(x.decision==='CANCELLED')x.collection='PENDING';
+ render();renderChanges(x);closeCard();toast('Maklumat customer berjaya disimpan (demo).')}
+function openPass(id){passId=id;let x=customers.find(a=>a.id===id);if(!(x.stock==='READY'&&x.collection==='CONFIRMED'&&x.decision!=='CANCELLED')){toast('Pass Stock hanya boleh apabila stok READY dan Collection Confirmation CONFIRMED.');return}el('passInfo').innerHTML=`<b>${x.name}</b><br>${x.case} · ${x.product}<br>Branch Pickup: <b>${x.pickup}</b>`;el('passDate').value=x.passDate||new Date().toISOString().slice(0,10);el('passBg').classList.add('show')}
+function closePass(){el('passBg').classList.remove('show')}
+function savePass(){let x=customers.find(a=>a.id===passId);if(!el('passDate').value){toast('Sila pilih Date Pass Stok.');return}if(!(x.stock==='READY'&&x.collection==='CONFIRMED'&&x.decision!=='CANCELLED')){toast('Syarat Pass Stock tidak dipenuhi.');return}let old=x.passDate||'—';x.passDate=el('passDate').value;x.changes.push({field:'Date Pass Stok',before:old,after:x.passDate,time:new Date().toLocaleString('en-MY'),staff:'Current Staff'});render();closePass();toast('Tarikh pass stok direkodkan (demo).')}
+function toast(s){el('toast').textContent=s;el('toast').classList.add('show');setTimeout(()=>el('toast').classList.remove('show'),2600)}
+populateMonthFilter();
+render();
+</script></body></html>
