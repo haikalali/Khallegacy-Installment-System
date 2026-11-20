@@ -239,6 +239,8 @@ export interface ActivityEvent {
 
 export interface StockFollowUpState {
   colour: string;
+  colour2?: string;
+  colour3?: string;
   stockStage: StockWorkflowStage;
   customerDecision: CustomerStockDecision;
   collectionConfirmation: CollectionConfirmationStatus;

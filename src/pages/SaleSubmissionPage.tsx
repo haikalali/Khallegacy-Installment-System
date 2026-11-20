@@ -374,10 +374,10 @@ export const SaleSubmissionPage: React.FC<SaleSubmissionPageProps> = ({
                   <th className="py-3 pl-3 pr-1.5 whitespace-nowrap">No</th>
                   <th className="py-3 px-1.5 whitespace-nowrap">IC Number</th>
                   <th className="py-3 px-1.5 whitespace-nowrap">Product</th>
-                  <th className="py-3 px-1.5 text-right whitespace-nowrap">Finance Amount</th>
+                  <th className="py-3 px-1.5 text-right whitespace-nowrap">Total Product Price</th>
                   <th className="py-3 px-1.5 text-right whitespace-nowrap">Deposit</th>
                   <th className="py-3 px-1.5 text-right whitespace-nowrap">Stamp Duty Fee</th>
-                  <th className="py-3 px-1.5 text-right whitespace-nowrap">Processing Fee</th>
+                  <th className="py-3 px-1.5 text-right whitespace-nowrap">Processing Fee + SST</th>
                   <th className="py-3 px-1.5 text-right whitespace-nowrap">Actual Cash Payment</th>
                   <th className="py-3 pl-1.5 pr-3 text-center whitespace-nowrap">
                     <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
@@ -402,6 +402,7 @@ export const SaleSubmissionPage: React.FC<SaleSubmissionPageProps> = ({
                     .map((p) => `${p.productName}${p.model ? ` (${p.model})` : ''}`)
                     .join(', ');
                   const actualCash = resolveActualCashPayment(app.financing);
+                  const processingFeeWithSst = app.financing.processingFee + app.financing.sstAmount;
 
                   return (
                     <tr
@@ -430,7 +431,7 @@ export const SaleSubmissionPage: React.FC<SaleSubmissionPageProps> = ({
                         {extraCount > 0 ? `${primaryProduct} (+${extraCount})` : primaryProduct}
                       </td>
                       <td className="py-3 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
-                        {formatRM(app.financing.financingAmount)}
+                        {formatRM(app.financing.totalProductPrice)}
                       </td>
                       <td className="py-3 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
                         {formatRM(app.financing.deposit)}
@@ -439,7 +440,7 @@ export const SaleSubmissionPage: React.FC<SaleSubmissionPageProps> = ({
                         {formatRM(app.financing.stampDutyFee)}
                       </td>
                       <td className="py-3 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
-                        {formatRM(app.financing.processingFee)}
+                        {formatRM(processingFeeWithSst)}
                       </td>
                       <td className="py-3 px-1.5 whitespace-nowrap text-right font-mono-tabular font-semibold text-blue-700">
                         {formatRM(actualCash)}

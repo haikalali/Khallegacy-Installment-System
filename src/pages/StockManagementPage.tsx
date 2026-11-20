@@ -84,6 +84,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
   const [formFromBranch, setFormFromBranch] = useState('');
   const [formPickupBranch, setFormPickupBranch] = useState('');
   const [formColour, setFormColour] = useState('');
+  const [formColour2, setFormColour2] = useState('');
+  const [formColour3, setFormColour3] = useState('');
   const [formStockStage, setFormStockStage] = useState<StockWorkflowStage>('NOT YET CHECKING');
   const [formDecision, setFormDecision] = useState<CustomerStockDecision>('PENDING DECISION');
   const [formCollection, setFormCollection] = useState<CollectionConfirmationStatus>('PENDING');
@@ -358,6 +360,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
     setFormFromBranch(rec.app.customerFromBranchId);
     setFormPickupBranch(rec.app.pickupBranchId ?? '');
     setFormColour(rec.followUp.colour);
+    setFormColour2(rec.followUp.colour2 || '');
+    setFormColour3(rec.followUp.colour3 || '');
     setFormStockStage(rec.followUp.stockStage);
     setFormDecision(rec.followUp.customerDecision);
     setFormCollection(rec.followUp.collectionConfirmation);
@@ -387,6 +391,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
       customerFromBranchId: formFromBranch,
       pickupBranchId: formPickupBranch || null,
       colour: formColour,
+      colour2: formColour2,
+      colour3: formColour3,
       stockStage: formStockStage,
       customerDecision: formDecision,
       collectionConfirmation: formCollection,
@@ -1047,7 +1053,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-3.5">
                 <div>
                   <label
                     htmlFor="card-from-branch"
@@ -1092,22 +1098,76 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                     <option value="POSTAGE">POSTAGE</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label
-                    htmlFor="card-colour"
-                    className="block text-[11px] font-medium text-slate-700 mb-1"
-                  >
-                    COLOUR (MANUAL INPUT)
-                  </label>
-                  <input
-                    id="card-colour"
-                    type="text"
-                    value={formColour}
-                    onChange={(e) => setFormColour(e.target.value)}
-                    placeholder="Masukkan warna pilihan / warna akhir"
-                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                  />
+              {/* Product Colours (Dynamic based on product count) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+                    Product Colour(s) ({editingRecord.app.products.length} Product
+                    {editingRecord.app.products.length > 1 ? 's' : ''})
+                  </span>
+                </div>
+
+                <div
+                  className={`grid grid-cols-1 ${
+                    editingRecord.app.products.length >= 2 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-1'
+                  } gap-3`}
+                >
+                  <div>
+                    <label
+                      htmlFor="card-colour-1"
+                      className="block text-[11px] font-medium text-slate-700 mb-1"
+                    >
+                      COLOUR 1 {editingRecord.app.products[0] ? `(${editingRecord.app.products[0].productName})` : ''}
+                    </label>
+                    <input
+                      id="card-colour-1"
+                      type="text"
+                      value={formColour}
+                      onChange={(e) => setFormColour(e.target.value)}
+                      placeholder="e.g. GREEN / DESERT TITANIUM"
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    />
+                  </div>
+
+                  {editingRecord.app.products.length >= 2 && (
+                    <div>
+                      <label
+                        htmlFor="card-colour-2"
+                        className="block text-[11px] font-medium text-slate-700 mb-1"
+                      >
+                        COLOUR 2 {editingRecord.app.products[1] ? `(${editingRecord.app.products[1].productName})` : ''}
+                      </label>
+                      <input
+                        id="card-colour-2"
+                        type="text"
+                        value={formColour2}
+                        onChange={(e) => setFormColour2(e.target.value)}
+                        placeholder="e.g. BLACK / SPACE GRAY"
+                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                      />
+                    </div>
+                  )}
+
+                  {editingRecord.app.products.length >= 3 && (
+                    <div>
+                      <label
+                        htmlFor="card-colour-3"
+                        className="block text-[11px] font-medium text-slate-700 mb-1"
+                      >
+                        COLOUR 3 {editingRecord.app.products[2] ? `(${editingRecord.app.products[2].productName})` : ''}
+                      </label>
+                      <input
+                        id="card-colour-3"
+                        type="text"
+                        value={formColour3}
+                        onChange={(e) => setFormColour3(e.target.value)}
+                        placeholder="e.g. SILVER / WHITE"
+                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

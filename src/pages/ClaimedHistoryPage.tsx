@@ -159,7 +159,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
       'Finance Amount (RM)',
       'Deposit (RM)',
       'Stamp Duty Fee (RM)',
-      'Processing Fee (RM)',
+      'Processing Fee + SST (RM)',
       'Actual Payment (RM)',
       'Branch Pickup',
       'INVOICE',
@@ -171,6 +171,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
         .map((p) => `${p.productName}${p.quantity > 1 ? ` x${p.quantity}` : ''}`)
         .join(', ');
       const actualPayment = resolveActualCashPayment(app.financing);
+      const processingFeeWithSst = app.financing.processingFee + app.financing.sstAmount;
       return [
         String(index + 1),
         app.customerName,
@@ -178,7 +179,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
         app.financing.financingAmount.toFixed(2),
         app.financing.deposit.toFixed(2),
         app.financing.stampDutyFee.toFixed(2),
-        app.financing.processingFee.toFixed(2),
+        processingFeeWithSst.toFixed(2),
         actualPayment.toFixed(2),
         branchName(app.pickupBranchId),
         app.agreement.invoiceNumber || '-',
@@ -426,7 +427,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
                   <th className="py-2.5 px-1 text-right">Finance Amount</th>
                   <th className="py-2.5 px-1 text-right">Deposit</th>
                   <th className="py-2.5 px-1 text-right">Stamp Duty Fee</th>
-                  <th className="py-2.5 px-1 text-right">Processing Fee</th>
+                  <th className="py-2.5 px-1 text-right">Processing Fee + SST</th>
                   <th className="py-2.5 px-1 text-right">Actual Payment</th>
                   <th className="py-2.5 px-1">Branch Pickup</th>
                   <th className="py-2.5 px-1 whitespace-nowrap">INVOICE</th>
@@ -442,6 +443,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
                     .join(', ');
                   const actualPayment = resolveActualCashPayment(app.financing);
                   const claimDate = resolveClaimDate(app);
+                  const processingFeeWithSst = app.financing.processingFee + app.financing.sstAmount;
 
                   return (
                     <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
@@ -476,7 +478,7 @@ export const ClaimedHistoryPage: React.FC<ClaimedHistoryPageProps> = ({
                         {formatRM(app.financing.stampDutyFee)}
                       </td>
                       <td className="py-2.5 px-1 text-right whitespace-nowrap font-mono-tabular text-slate-700">
-                        {formatRM(app.financing.processingFee)}
+                        {formatRM(processingFeeWithSst)}
                       </td>
                       <td className="py-2.5 px-1 text-right whitespace-nowrap font-mono-tabular font-semibold text-emerald-700">
                         {formatRM(actualPayment)}

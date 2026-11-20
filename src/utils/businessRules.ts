@@ -1130,6 +1130,8 @@ export interface UpdateStockFollowUpPayload {
   customerFromBranchId: string;
   pickupBranchId: string | null;
   colour: string;
+  colour2?: string;
+  colour3?: string;
   stockStage: StockWorkflowStage;
   customerDecision: CustomerStockDecision;
   collectionConfirmation: CollectionConfirmationStatus;
@@ -1184,10 +1186,28 @@ export function updateStockFollowUpTransition(
       after: branchLabel(payload.pickupBranchId),
     },
     {
-      field: 'Colour',
+      field: 'Colour 1',
       before: prevFollowUp.colour || '—',
       after: payload.colour.trim() || '—',
     },
+    ...(app.products.length >= 2
+      ? [
+          {
+            field: 'Colour 2',
+            before: prevFollowUp.colour2 || '—',
+            after: (payload.colour2 || '').trim() || '—',
+          },
+        ]
+      : []),
+    ...(app.products.length >= 3
+      ? [
+          {
+            field: 'Colour 3',
+            before: prevFollowUp.colour3 || '—',
+            after: (payload.colour3 || '').trim() || '—',
+          },
+        ]
+      : []),
     {
       field: 'Stock Status',
       before: prevFollowUp.stockStage,
@@ -1256,6 +1276,8 @@ export function updateStockFollowUpTransition(
     products: updatedProducts,
     stockFollowUp: {
       colour: payload.colour.trim(),
+      ...(app.products.length >= 2 ? { colour2: (payload.colour2 || '').trim() } : {}),
+      ...(app.products.length >= 3 ? { colour3: (payload.colour3 || '').trim() } : {}),
       stockStage: payload.stockStage,
       customerDecision: payload.customerDecision,
       collectionConfirmation: nextCollection,
