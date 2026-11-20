@@ -29,6 +29,7 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [branchId, setBranchId] = useState(branches[0]?.id || '');
   const [roleId, setRoleId] = useState(roles[0]?.id || '');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
@@ -39,6 +40,7 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
     setName('');
     setUsername('');
     setEmail('');
+    setPassword('');
     setBranchId(branches[0]?.id || '');
     setRoleId(roles[0]?.id || '');
     setStatus('Active');
@@ -51,6 +53,7 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
     setName(u.name);
     setUsername(u.username);
     setEmail(u.email);
+    setPassword('');
     setBranchId(u.branchId);
     setRoleId(u.roleId);
     setStatus(u.status);
@@ -230,11 +233,17 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
                   setFormError('Staff name, username, and email are required.');
                   return;
                 }
+                const trimmedPassword = password.trim();
                 onSaveUser(
                   {
                     name: name.trim(),
                     username: username.trim(),
                     email: email.trim(),
+                    ...(trimmedPassword
+                      ? { password: trimmedPassword }
+                      : editingUser?.password
+                        ? { password: editingUser.password }
+                        : {}),
                     branchId,
                     roleId,
                     status,
@@ -282,17 +291,34 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
               />
             </div>
           </div>
-          <div>
-            <label htmlFor="usr-email" className="block font-medium text-slate-700 mb-1">
-              Email
-            </label>
-            <input
-              id="usr-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="usr-email" className="block font-medium text-slate-700 mb-1">
+                Email
+              </label>
+              <input
+                id="usr-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <label htmlFor="usr-password" className="block font-medium text-slate-700 mb-1">
+                Password
+              </label>
+              <input
+                id="usr-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={
+                  editingUser ? 'Leave blank to keep current' : 'Default: khallegacy123'
+                }
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>

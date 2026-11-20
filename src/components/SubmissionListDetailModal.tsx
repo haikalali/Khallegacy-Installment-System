@@ -47,10 +47,10 @@ export const SubmissionListDetailModal: React.FC<SubmissionListDetailModalProps>
         'IC Number',
         'Customer Name',
         'Product',
-        'Finance Amount (RM)',
+        'Total Product Price (RM)',
         'Deposit (RM)',
         'Stamp Duty Fee (RM)',
-        'Processing Fee (RM)',
+        'Processing Fee + SST (RM)',
         'Actual Cash Payment (RM)',
       ],
       ...sub.agreementIds.map((id, idx) => {
@@ -61,15 +61,16 @@ export const SubmissionListDetailModal: React.FC<SubmissionListDetailModalProps>
         const productTitle = app.products
           .map((p) => `${p.productName}${p.model ? ` (${p.model})` : ''}`)
           .join(', ');
+        const processingFeeWithSst = app.financing.processingFee + app.financing.sstAmount;
         return [
           String(idx + 1),
           app.icNumber,
           app.customerName,
           productTitle,
-          app.financing.financingAmount.toFixed(2),
+          app.financing.totalProductPrice.toFixed(2),
           app.financing.deposit.toFixed(2),
           app.financing.stampDutyFee.toFixed(2),
-          app.financing.processingFee.toFixed(2),
+          processingFeeWithSst.toFixed(2),
           resolveActualCashPayment(app.financing).toFixed(2),
         ];
       }),
@@ -163,10 +164,10 @@ export const SubmissionListDetailModal: React.FC<SubmissionListDetailModalProps>
                     <th className="py-2.5 px-1.5 whitespace-nowrap">IC Number</th>
                     <th className="py-2.5 px-1.5 whitespace-nowrap">Customer Name</th>
                     <th className="py-2.5 px-1.5 whitespace-nowrap">Product</th>
-                    <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Finance Amount</th>
+                    <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Total Product Price</th>
                     <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Deposit</th>
                     <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Stamp Duty Fee</th>
-                    <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Processing Fee</th>
+                    <th className="py-2.5 px-1.5 text-right whitespace-nowrap">Processing Fee + SST</th>
                     <th className="py-2.5 pl-1.5 pr-3 text-right whitespace-nowrap">
                       Actual Cash Payment
                     </th>
@@ -210,7 +211,7 @@ export const SubmissionListDetailModal: React.FC<SubmissionListDetailModalProps>
                           {extraCount > 0 ? `${primaryProduct} (+${extraCount})` : primaryProduct}
                         </td>
                         <td className="py-2.5 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
-                          {formatRM(app.financing.financingAmount)}
+                          {formatRM(app.financing.totalProductPrice)}
                         </td>
                         <td className="py-2.5 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
                           {formatRM(app.financing.deposit)}
@@ -219,7 +220,7 @@ export const SubmissionListDetailModal: React.FC<SubmissionListDetailModalProps>
                           {formatRM(app.financing.stampDutyFee)}
                         </td>
                         <td className="py-2.5 px-1.5 whitespace-nowrap text-right font-mono-tabular text-slate-700">
-                          {formatRM(app.financing.processingFee)}
+                          {formatRM(app.financing.processingFee + app.financing.sstAmount)}
                         </td>
                         <td className="py-2.5 pl-1.5 pr-3 whitespace-nowrap text-right font-mono-tabular font-semibold text-slate-900">
                           {formatRM(resolveActualCashPayment(app.financing))}

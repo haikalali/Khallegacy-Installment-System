@@ -92,7 +92,7 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
   onViewDetails,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | PostageTrackingStatus>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_TRANSIT_ACTIVE' | PostageTrackingStatus>('ALL');
   const [courierFilter, setCourierFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -152,7 +152,11 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return trackings.filter((item) => {
-      if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
+      if (statusFilter === 'IN_TRANSIT_ACTIVE') {
+        if (item.status !== 'IN TRANSIT' && item.status !== 'OUT FOR DELIVERY') return false;
+      } else if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+        return false;
+      }
       if (courierFilter !== 'ALL' && item.courier !== courierFilter) return false;
       if (q) {
         const hit =
@@ -272,9 +276,20 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+      {/* Summary Cards: Total Tracking, Pending, In Transit, Delivered */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter('ALL');
+            setCurrentPage(1);
+          }}
+          className={`text-left bg-white border rounded-xl p-4 shadow-sm transition-colors ${
+            statusFilter === 'ALL'
+              ? 'border-blue-500 ring-1 ring-blue-500/20'
+              : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-500">Total Tracking</p>
             <Package className="w-4 h-4 text-slate-600" aria-hidden="true" />
@@ -283,9 +298,20 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
             {summary.total}
           </p>
           <p className="text-[11px] text-slate-500 mt-1">All recorded postage shipments</p>
-        </div>
+        </button>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter((prev) => (prev === 'PENDING' ? 'ALL' : 'PENDING'));
+            setCurrentPage(1);
+          }}
+          className={`text-left bg-white border rounded-xl p-4 shadow-sm transition-colors ${
+            statusFilter === 'PENDING'
+              ? 'border-amber-500 ring-1 ring-amber-500/20'
+              : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-500">Pending</p>
             <Clock className="w-4 h-4 text-amber-600" aria-hidden="true" />
@@ -294,9 +320,20 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
             {summary.pending}
           </p>
           <p className="text-[11px] text-slate-500 mt-1">Awaiting courier pickup / scan</p>
-        </div>
+        </button>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter((prev) => (prev === 'IN_TRANSIT_ACTIVE' ? 'ALL' : 'IN_TRANSIT_ACTIVE'));
+            setCurrentPage(1);
+          }}
+          className={`text-left bg-white border rounded-xl p-4 shadow-sm transition-colors ${
+            statusFilter === 'IN_TRANSIT_ACTIVE' || statusFilter === 'IN TRANSIT'
+              ? 'border-blue-500 ring-1 ring-blue-500/20'
+              : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-500">In Transit</p>
             <Truck className="w-4 h-4 text-blue-600" aria-hidden="true" />
@@ -305,9 +342,20 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
             {summary.inTransit}
           </p>
           <p className="text-[11px] text-slate-500 mt-1">On the way or out for delivery</p>
-        </div>
+        </button>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter((prev) => (prev === 'DELIVERED' ? 'ALL' : 'DELIVERED'));
+            setCurrentPage(1);
+          }}
+          className={`text-left bg-white border rounded-xl p-4 shadow-sm transition-colors ${
+            statusFilter === 'DELIVERED'
+              ? 'border-emerald-500 ring-1 ring-emerald-500/20'
+              : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-500">Delivered</p>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" aria-hidden="true" />
@@ -316,7 +364,7 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
             {summary.delivered}
           </p>
           <p className="text-[11px] text-slate-500 mt-1">Confirmed delivered to recipient</p>
-        </div>
+        </button>
       </div>
 
       {/* Filters & Create New Tracking Action Bar */}
@@ -382,12 +430,15 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
                 id="postage-status-filter"
                 value={statusFilter}
                 onChange={(e) => {
-                  setStatusFilter(e.target.value as 'ALL' | PostageTrackingStatus);
+                  setStatusFilter(
+                    e.target.value as 'ALL' | 'IN_TRANSIT_ACTIVE' | PostageTrackingStatus,
+                  );
                   setCurrentPage(1);
                 }}
                 className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500"
               >
                 <option value="ALL">All Statuses</option>
+                <option value="IN_TRANSIT_ACTIVE">IN TRANSIT &amp; OUT FOR DELIVERY</option>
                 {POSTAGE_STATUS_OPTIONS.map((st) => (
                   <option key={st} value={st}>
                     {st}
@@ -467,7 +518,11 @@ export const PostageManagementPage: React.FC<PostageManagementPageProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {paginated.map((record) => {
-                  const externalUrl = buildCourierTrackingUrl(record.courier, record.trackingNumber);
+                  const externalUrl = buildCourierTrackingUrl(
+                    record.courier,
+                    record.trackingNumber,
+                    couriers,
+                  );
                   return (
                     <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 pl-4 pr-2 whitespace-nowrap tabular-nums text-slate-700">

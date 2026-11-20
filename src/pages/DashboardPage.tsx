@@ -16,10 +16,12 @@ import type {
   InstallmentApplication,
   PageId,
   ProductCategory,
+  SaleSubmissionList,
 } from '../types/khallegacy';
 import {
   deriveStockFollowUp,
   filterApplicationsByApprovalDateRange,
+  formatDateShort,
   formatDateTime,
   formatRM,
   hasAllProductsStockReady,
@@ -32,6 +34,7 @@ import { TableSkeleton } from '../components/StateViews';
 interface DashboardPageProps {
   applications: InstallmentApplication[];
   branches: Branch[];
+  saleSubmissions: SaleSubmissionList[];
   recentActivities: ActivityEvent[];
   onNavigate: (page: PageId) => void;
   onSelectApplication: (appId: string) => void;
@@ -40,6 +43,7 @@ interface DashboardPageProps {
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   applications,
   branches,
+  saleSubmissions,
   recentActivities,
   onNavigate,
   onSelectApplication,
@@ -49,21 +53,54 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [customEnd, setCustomEnd] = useState('2026-11-17');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const filteredApps = useMemo(() => {
+  const periodRange = useMemo(() => {
     if (period === 'today') {
-      return filterApplicationsByApprovalDateRange(applications, '2026-11-17', '2026-11-17');
+      return { start: '2026-11-17', end: '2026-11-17' };
     }
     if (period === 'week') {
-      return filterApplicationsByApprovalDateRange(applications, '2026-11-11', '2026-11-17');
+      return { start: '2026-11-11', end: '2026-11-17' };
     }
     if (period === 'month') {
-      return filterApplicationsByApprovalDateRange(applications, '2026-11-01', '2026-11-30');
+      return { start: '2026-11-01', end: '2026-11-30' };
     }
     if (period === 'year') {
-      return filterApplicationsByApprovalDateRange(applications, '2026-01-01', '2026-12-31');
+      return { start: '2026-01-01', end: '2026-12-31' };
     }
-    return filterApplicationsByApprovalDateRange(applications, customStart, customEnd);
-  }, [applications, period, customStart, customEnd]);
+    return { start: customStart, end: customEnd };
+  }, [period, customStart, customEnd]);
+
+  const filteredApps = useMemo(() => {
+    return filterApplicationsByApprovalDateRange(
+      applications,
+      periodRange.start,
+      periodRange.end,
+    );
+  }, [applications, periodRange]);
+
+  const filteredSubmissions = useMemo(() => {
+    return saleSubmissions
+      .filter((sub) => {
+        if (periodRange.start && sub.submissionDate < periodRange.start) return false;
+        if (periodRange.end && sub.submissionDate > periodRange.end) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.submissionDate !== b.submissionDate) {
+          return b.submissionDate.localeCompare(a.submissionDate);
+        }
+        return b.createdAt.localeCompare(a.createdAt);
+      });
+  }, [saleSubmissions, periodRange]);
+
+  const totalSubmissionProductAmount = useMemo(
+    () => filteredSubmissions.reduce((sum, s) => sum + s.totalProductAmount, 0),
+    [filteredSubmissions],
+  );
+
+  const totalSubmissionAgreements = useMemo(
+    () => filteredSubmissions.reduce((sum, s) => sum + s.agreementCount, 0),
+    [filteredSubmissions],
+  );
 
   // Executive Dashboard Metrics
   const totalApproved = useMemo(
@@ -367,6 +404,78 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </span>
               </div>
             </button>
+          </div>
+
+          {/* Section: Submission List */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <h3 className="text-sm font-semibold text-slate-900">Submission List</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate('sale-submission')}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 whitespace-nowrap"
+              >
+                View Sale Submission &rarr;
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="py-2.5 px-4">Submission Date</th>
+                    <th className="py-2.5 px-4 text-right">Total Product Amount</th>
+                    <th className="py-2.5 px-4 text-right">Total Agreement</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                  {filteredSubmissions.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-slate-400">
+                        No sale submission lists created for the selected period.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSubmissions.map((sub) => (
+                      <tr
+                        key={sub.id}
+                        onClick={() => onNavigate('sale-submission')}
+                        className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                      >
+                        <td className="py-3 px-4 font-medium text-slate-900">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{formatDateShort(sub.submissionDate)}</span>
+                            <span className="font-mono-tabular text-[11px] text-slate-500">
+                              ({sub.submissionListId})
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right tabular-nums font-medium text-slate-900">
+                          {formatRM(sub.totalProductAmount)}
+                        </td>
+                        <td className="py-3 px-4 text-right tabular-nums font-semibold text-blue-600">
+                          {sub.agreementCount}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-slate-200 bg-slate-50/80 font-semibold text-xs text-slate-900">
+                    <td className="py-3 px-4 uppercase tracking-wider">TOTAL</td>
+                    <td className="py-3 px-4 text-right tabular-nums">
+                      {formatRM(totalSubmissionProductAmount)}
+                    </td>
+                    <td className="py-3 px-4 text-right tabular-nums text-blue-600">
+                      {totalSubmissionAgreements}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
           {/* Section: Agreement To Be Receive by Pickup Branch */}

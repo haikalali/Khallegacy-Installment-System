@@ -57,6 +57,25 @@ type StockSortKey =
   | 'action'
   | 'remark';
 
+const NOW = new Date();
+const DEFAULT_CURRENT_YEAR = String(NOW.getFullYear());
+const DEFAULT_CURRENT_MONTH = String(NOW.getMonth() + 1).padStart(2, '0');
+
+const MONTH_NAMES: { value: string; label: string }[] = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+
 export const StockManagementPage: React.FC<StockManagementPageProps> = ({
   applications,
   branches,
@@ -64,7 +83,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
   onUpdateStockFollowUp,
   onPassStockToBranch,
 }) => {
-  const [monthFilter, setMonthFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState(DEFAULT_CURRENT_MONTH);
+  const [yearFilter, setYearFilter] = useState(DEFAULT_CURRENT_YEAR);
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('');
   const [decisionFilter, setDecisionFilter] = useState('');
@@ -130,24 +150,23 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
       .sort((a, b) => b.approvalDate.localeCompare(a.approvalDate));
   }, [applications]);
 
-  const monthOptions = useMemo(() => {
-    const keys = Array.from(new Set(approvedRecords.map((r) => r.monthKey).filter(Boolean)))
-      .sort()
-      .reverse();
-    return keys.map((k) => {
-      const [y, m] = k.split('-');
-      const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-MY', {
-        month: 'long',
-        year: 'numeric',
-      });
-      return { value: k, label };
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>([DEFAULT_CURRENT_YEAR]);
+    approvedRecords.forEach((r) => {
+      const y = r.monthKey.slice(0, 4);
+      if (y) years.add(y);
     });
+    return Array.from(years).sort().reverse();
   }, [approvedRecords]);
 
   const monthRecords = useMemo(() => {
-    if (!monthFilter) return approvedRecords;
-    return approvedRecords.filter((r) => r.monthKey === monthFilter);
-  }, [approvedRecords, monthFilter]);
+    return approvedRecords.filter((r) => {
+      const [y, m] = (r.monthKey || '').split('-');
+      if (yearFilter && y !== yearFilter) return false;
+      if (monthFilter && m !== monthFilter) return false;
+      return true;
+    });
+  }, [approvedRecords, yearFilter, monthFilter]);
 
   const stats = useMemo(() => {
     const active = monthRecords.filter((r) => r.followUp.customerDecision !== 'CANCELLED');
@@ -159,10 +178,11 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
       stokOtw: active.filter((r) => r.followUp.stockStage === 'STOK OTW').length,
       pendingCustomer: active.filter((r) => r.followUp.collectionConfirmation !== 'CONFIRMED')
         .length,
-      confirmedCustomer: monthRecords.filter(
+      readyToPassStock: active.filter(
         (r) =>
+          r.followUp.stockStage === 'READY' &&
           r.followUp.collectionConfirmation === 'CONFIRMED' &&
-          r.followUp.customerDecision !== 'CANCELLED',
+          !r.passDate,
       ).length,
       stockPassed: active.filter((r) => Boolean(r.passDate)).length,
     };
@@ -183,7 +203,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
           (activeStatFilter === 'PENDING'
             ? f.collectionConfirmation !== 'CONFIRMED' && f.customerDecision !== 'CANCELLED'
             : activeStatFilter === 'CONFIRMED'
-              ? f.collectionConfirmation === 'CONFIRMED' && f.customerDecision !== 'CANCELLED'
+              ? canPass && !r.passDate
               : activeStatFilter === 'STOCK PASSED'
                 ? Boolean(r.passDate) && f.customerDecision !== 'CANCELLED'
                 : f.stockStage === activeStatFilter && f.customerDecision !== 'CANCELLED');
@@ -317,7 +337,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
   };
 
   const resetAllFilters = () => {
-    setMonthFilter('');
+    setMonthFilter(DEFAULT_CURRENT_MONTH);
+    setYearFilter(DEFAULT_CURRENT_YEAR);
     setSearchQuery('');
     setStockFilter('');
     setDecisionFilter('');
@@ -340,7 +361,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
       passStatusFilter ||
       approvalDateFilter ||
       searchQuery ||
-      monthFilter,
+      monthFilter !== DEFAULT_CURRENT_MONTH ||
+      yearFilter !== DEFAULT_CURRENT_YEAR,
   );
 
   const editingRecord = useMemo(
@@ -478,9 +500,9 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
     },
     {
       key: 'CONFIRMED',
-      label: 'CONFIRMED CUSTOMER',
-      value: stats.confirmedCustomer,
-      hint: 'Customer sahkan collection',
+      label: 'READY TO PASS STOCK',
+      value: stats.readyToPassStock,
+      hint: 'Stok ready & disahkan, sedia dipass',
       toneClass: 'text-emerald-600',
       ringClass: 'border-emerald-500 ring-1 ring-emerald-500/20',
     },
@@ -507,26 +529,41 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <label
-            htmlFor="stock-month-filter"
-            className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
-          >
-            Filter Month
-          </label>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+            Filter Period
+          </span>
           <select
             id="stock-month-filter"
+            aria-label="Filter Month"
             value={monthFilter}
             onChange={(e) => {
               setMonthFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="min-w-[180px] px-3 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+            className="min-w-[140px] px-3 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
           >
             <option value="">All Months</option>
-            {monthOptions.map((m) => (
+            {MONTH_NAMES.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
+              </option>
+            ))}
+          </select>
+          <select
+            id="stock-year-filter"
+            aria-label="Filter Year"
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="min-w-[110px] px-3 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+          >
+            <option value="">All Years</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
               </option>
             ))}
           </select>

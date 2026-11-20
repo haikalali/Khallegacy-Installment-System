@@ -38,12 +38,33 @@ type SortKey =
   | 'product'
   | 'customerFromBranchId';
 
+const NOW = new Date();
+const DEFAULT_CURRENT_YEAR = String(NOW.getFullYear());
+const DEFAULT_CURRENT_MONTH = String(NOW.getMonth() + 1).padStart(2, '0');
+
+const MONTH_NAMES: { value: string; label: string }[] = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+
 export const ApprovalListPage: React.FC<ApprovalListPageProps> = ({
   applications,
   branches,
   defaultPageSize,
   onViewDetails,
 }) => {
+  const [monthFilter, setMonthFilter] = useState(DEFAULT_CURRENT_MONTH);
+  const [yearFilter, setYearFilter] = useState(DEFAULT_CURRENT_YEAR);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | ProductCategory>('ALL');
   const [origBranchFilter, setOrigBranchFilter] = useState<string>('ALL');
@@ -68,27 +89,47 @@ export const ApprovalListPage: React.FC<ApprovalListPageProps> = ({
     [applications],
   );
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>([DEFAULT_CURRENT_YEAR]);
+    applications.forEach((a) => {
+      const dateStr = a.approvalDate || a.applicationDate;
+      const y = dateStr.slice(0, 4);
+      if (y) years.add(y);
+    });
+    return Array.from(years).sort().reverse();
+  }, [applications]);
+
+  const periodApplications = useMemo(() => {
+    return applications.filter((app) => {
+      const dateStr = (app.approvalDate || app.applicationDate).slice(0, 7);
+      const [y, m] = dateStr.split('-');
+      if (yearFilter && y !== yearFilter) return false;
+      if (monthFilter && m !== monthFilter) return false;
+      return true;
+    });
+  }, [applications, yearFilter, monthFilter]);
+
   const summary = useMemo(() => {
     let apple = 0;
     let android = 0;
     let gameConsole = 0;
-    for (const app of applications) {
+    for (const app of periodApplications) {
       const cat = resolveApplicationCategory(app);
       if (cat === 'Apple') apple += 1;
       else if (cat === 'Android') android += 1;
       else if (cat === 'Game&Console') gameConsole += 1;
     }
     return {
-      total: applications.length,
+      total: periodApplications.length,
       apple,
       android,
       gameConsole,
     };
-  }, [applications]);
+  }, [periodApplications]);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return applications
+    return periodApplications
       .filter((app) => {
         if (q) {
           const hit =
@@ -125,7 +166,7 @@ export const ApprovalListPage: React.FC<ApprovalListPageProps> = ({
         return sortDir === 'asc' ? cmp : -cmp;
       });
   }, [
-    applications,
+    periodApplications,
     searchTerm,
     categoryFilter,
     origBranchFilter,
@@ -151,6 +192,8 @@ export const ApprovalListPage: React.FC<ApprovalListPageProps> = ({
   };
 
   const resetFilters = () => {
+    setMonthFilter(DEFAULT_CURRENT_MONTH);
+    setYearFilter(DEFAULT_CURRENT_YEAR);
     setSearchTerm('');
     setCategoryFilter('ALL');
     setOrigBranchFilter('ALL');
@@ -160,6 +203,56 @@ export const ApprovalListPage: React.FC<ApprovalListPageProps> = ({
 
   return (
     <div className="space-y-5">
+      {/* Month / Year Filter Above Summary */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Approval List Overview</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Senarai permohonan pelanggan mengikut bulan dan tahun kelulusan.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+            Filter Period
+          </span>
+          <select
+            id="approval-month-filter"
+            aria-label="Filter Month"
+            value={monthFilter}
+            onChange={(e) => {
+              setMonthFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="min-w-[140px] px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+          >
+            <option value="">All Months</option>
+            {MONTH_NAMES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <select
+            id="approval-year-filter"
+            aria-label="Filter Year"
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="min-w-[110px] px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+          >
+            <option value="">All Years</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* 4 Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <button

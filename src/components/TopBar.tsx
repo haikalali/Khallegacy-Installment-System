@@ -4,6 +4,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
+  LogOut,
   Menu,
   Search,
   UserCheck,
@@ -34,6 +35,7 @@ interface TopBarProps {
   allRoles: RoleConfig[];
   branches: Branch[];
   onSwitchUser: (userId: string) => void;
+  onLogout: () => void;
 }
 
 const PAGE_META: Record<PageId, { section: string; title: string }> = {
@@ -68,6 +70,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   allRoles,
   branches,
   onSwitchUser,
+  onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -345,6 +348,19 @@ export const TopBar: React.FC<TopBarProps> = ({
                       </button>
                     );
                   })}
+              </div>
+              <div className="p-2 border-t border-slate-200 bg-slate-50/70">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full px-2.5 py-2 rounded-lg text-left flex items-center gap-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span>Log Out</span>
+                </button>
               </div>
             </div>
           )}

@@ -130,6 +130,15 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
   const [taskStatusInput, setTaskStatusInput] = useState<TaskStatusState>(() =>
     deriveTaskStatus(application, postageTrackings),
   );
+  const [checkingStaff1Input, setCheckingStaff1Input] = useState(
+    application.agreement.checkingStaff1 || '',
+  );
+  const [checkingStaff2Input, setCheckingStaff2Input] = useState(
+    application.agreement.checkingStaff2 || '',
+  );
+  const [invoiceNumberInput, setInvoiceNumberInput] = useState(
+    application.agreement.invoiceNumber || '',
+  );
 
   const syncFormFromApplication = (app: InstallmentApplication) => {
     setCaseIdInput(app.caseId);
@@ -169,6 +178,9 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
     setMonthlyEdited(true);
     setMonthlyManualStr(String(app.financing.monthlyInstallment));
     setTaskStatusInput(deriveTaskStatus(app, postageTrackings));
+    setCheckingStaff1Input(app.agreement.checkingStaff1 || '');
+    setCheckingStaff2Input(app.agreement.checkingStaff2 || '');
+    setInvoiceNumberInput(app.agreement.invoiceNumber || '');
     setEditError(null);
   };
 
@@ -347,6 +359,9 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
       installmentDuration: liveFinancing.installmentDuration,
       monthlyInstallment: liveFinancing.monthlyInstallment,
       taskStatus: taskStatusInput,
+      checkingStaff1: checkingStaff1Input.trim(),
+      checkingStaff2: checkingStaff2Input.trim(),
+      invoiceNumber: invoiceNumberInput.trim(),
     });
 
     if (ok) {
@@ -365,7 +380,7 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Approval List
+            Back to Last Page
           </button>
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono-tabular text-sm font-semibold text-slate-900">
@@ -1392,8 +1407,8 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                           <div
                             className={`px-3.5 py-2.5 rounded-lg border transition-colors ${
                               isEditing
-                                ? 'bg-white border-slate-200 space-y-1.5'
-                                : 'bg-slate-50/80 border-slate-200/80 flex flex-wrap items-center justify-between gap-2'
+                                ? 'bg-white border-slate-200 space-y-2'
+                                : 'bg-slate-50/80 border-slate-200/80'
                             }`}
                           >
                             {isEditing ? (
@@ -1421,16 +1436,98 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                                     </option>
                                   ))}
                                 </select>
+                                {step.key === 'agreementChecking' && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+                                    <div>
+                                      <label
+                                        htmlFor="edit-checking-staff-1"
+                                        className="block text-[10.5px] font-semibold text-slate-600 uppercase tracking-wider mb-1"
+                                      >
+                                        STAFF 1
+                                      </label>
+                                      <input
+                                        id="edit-checking-staff-1"
+                                        type="text"
+                                        value={checkingStaff1Input}
+                                        onChange={(e) => setCheckingStaff1Input(e.target.value)}
+                                        placeholder="Nama Staff 1"
+                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-md bg-white text-slate-900 focus:outline-none focus:border-blue-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label
+                                        htmlFor="edit-checking-staff-2"
+                                        className="block text-[10.5px] font-semibold text-slate-600 uppercase tracking-wider mb-1"
+                                      >
+                                        STAFF 2
+                                      </label>
+                                      <input
+                                        id="edit-checking-staff-2"
+                                        type="text"
+                                        value={checkingStaff2Input}
+                                        onChange={(e) => setCheckingStaff2Input(e.target.value)}
+                                        placeholder="Nama Staff 2"
+                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-md bg-white text-slate-900 focus:outline-none focus:border-blue-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label
+                                        htmlFor="edit-checking-invoice"
+                                        className="block text-[10.5px] font-semibold text-slate-600 uppercase tracking-wider mb-1"
+                                      >
+                                        NO INVOICE
+                                      </label>
+                                      <input
+                                        id="edit-checking-invoice"
+                                        type="text"
+                                        value={invoiceNumberInput}
+                                        onChange={(e) => setInvoiceNumberInput(e.target.value)}
+                                        placeholder="e.g. INV-2026-0001"
+                                        className="w-full px-2.5 py-1.5 text-xs font-mono-tabular border border-slate-200 rounded-md bg-white text-slate-900 focus:outline-none focus:border-blue-500"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </>
                             ) : (
                               <>
-                                <div className="min-w-0">
-                                  <span className="text-[10.5px] font-medium text-slate-400 uppercase tracking-wider block">
-                                    Step {idx + 1}
-                                  </span>
-                                  <span className="font-medium text-slate-900">{step.label}</span>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <span className="text-[10.5px] font-medium text-slate-400 uppercase tracking-wider block">
+                                      Step {idx + 1}
+                                    </span>
+                                    <span className="font-medium text-slate-900">{step.label}</span>
+                                  </div>
+                                  <StatusBadge status={step.value} />
                                 </div>
-                                <StatusBadge status={step.value} />
+                                {step.key === 'agreementChecking' && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 mt-2.5 border-t border-slate-200/70">
+                                    <div className="min-w-0">
+                                      <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        STAFF 1
+                                      </span>
+                                      <span className="block text-xs font-medium text-slate-800 truncate mt-0.5">
+                                        {application.agreement.checkingStaff1?.trim() || '—'}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        STAFF 2
+                                      </span>
+                                      <span className="block text-xs font-medium text-slate-800 truncate mt-0.5">
+                                        {application.agreement.checkingStaff2?.trim() || '—'}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        NO INVOICE
+                                      </span>
+                                      <span className="block text-xs font-mono-tabular font-medium text-slate-800 truncate mt-0.5">
+                                        {application.agreement.invoiceNumber?.trim() || '—'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>

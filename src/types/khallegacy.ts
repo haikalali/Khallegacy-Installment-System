@@ -123,6 +123,7 @@ export interface Courier {
   name: string;
   code: string;
   active: boolean;
+  trackingUrl?: string;
 }
 
 export interface RoleConfig {
@@ -138,6 +139,7 @@ export interface StaffUser {
   name: string;
   username: string;
   email: string;
+  password?: string;
   branchId: string;
   roleId: string;
   status: 'Active' | 'Inactive';

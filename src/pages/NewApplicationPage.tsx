@@ -70,6 +70,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
   const [stampDutyManualStr, setStampDutyManualStr] = useState('0.00');
   const [cashPaymentEdited, setCashPaymentEdited] = useState(false);
   const [cashPaymentManualStr, setCashPaymentManualStr] = useState('0.00');
+  const [installmentDuration, setInstallmentDuration] = useState<12 | 24 | 36>(24);
   const [monthlyInstallmentEdited, setMonthlyInstallmentEdited] = useState(false);
   const [monthlyInstallmentManualStr, setMonthlyInstallmentManualStr] = useState('0.00');
 
@@ -99,7 +100,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
       monthlyInstallmentOverride: monthlyInstallmentEdited
         ? Number(monthlyInstallmentManualStr) || 0
         : null,
-      installmentDuration: 24,
+      installmentDuration,
     });
   }, [
     products,
@@ -111,6 +112,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     stampDutyManualStr,
     cashPaymentEdited,
     cashPaymentManualStr,
+    installmentDuration,
     monthlyInstallmentEdited,
     monthlyInstallmentManualStr,
   ]);
@@ -174,6 +176,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     setStampDutyManualStr('0.00');
     setCashPaymentEdited(false);
     setCashPaymentManualStr('0.00');
+    setInstallmentDuration(24);
     setMonthlyInstallmentEdited(false);
     setMonthlyInstallmentManualStr('0.00');
     setInternalNotes('');
@@ -238,7 +241,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
       stampDutyFee: financingCalc.stampDutyFee,
       actualCashPayment: financingCalc.actualCashPayment,
       monthlyInstallment: financingCalc.monthlyInstallment,
-      installmentDuration: 24,
+      installmentDuration: financingCalc.installmentDuration,
     };
 
     const ok = onCreateApplication(payload, true);
@@ -916,7 +919,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                   </p>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <div className="flex items-center justify-between mb-1">
                     <label htmlFor="fin-monthly-installment" className="font-medium text-slate-700">
                       Monthly Installment (RM)
@@ -949,6 +952,25 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
                     Auto: Anggaran bayaran bulanan ({financingCalc.installmentDuration} bulan). Masih boleh diisi secara manual.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="fin-tenure" className="block font-medium text-slate-700 mb-1">
+                    Tenure
+                  </label>
+                  <select
+                    id="fin-tenure"
+                    value={installmentDuration}
+                    onChange={(e) => setInstallmentDuration(Number(e.target.value) as 12 | 24 | 36)}
+                    className="w-full px-3 py-2 text-xs font-mono-tabular border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                  >
+                    <option value={12}>12 Bulan</option>
+                    <option value={24}>24 Bulan</option>
+                    <option value={36}>36 Bulan</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Pilihan tempoh bayaran balik: 12 / 24 / 36 bulan.
                   </p>
                 </div>
               </div>
@@ -1193,6 +1215,12 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                   <span className="text-slate-500">Monthly Installment</span>
                   <strong className="font-mono-tabular text-slate-900">
                     {formatRM(financingCalc.monthlyInstallment)} / mo
+                  </strong>
+                </div>
+                <div className="flex justify-between items-center gap-2 text-xs">
+                  <span className="text-slate-500">Tenure</span>
+                  <strong className="font-mono-tabular text-slate-900">
+                    {financingCalc.installmentDuration} bulan
                   </strong>
                 </div>
               </div>

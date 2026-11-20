@@ -38,7 +38,10 @@ interface SystemSettingsPageProps {
   onUpdateBranch: (id: string, branch: { code: string; name: string; state: string }) => void;
   onToggleBranch: (id: string) => void;
   onAddCourier: (courier: Omit<Courier, 'id'>) => void;
-  onUpdateCourier: (id: string, courier: { code: string; name: string }) => void;
+  onUpdateCourier: (
+    id: string,
+    courier: { code: string; name: string; trackingUrl: string },
+  ) => void;
   onToggleCourier: (id: string) => void;
   onToggleRoleActive: (id: string) => void;
   onToggleRolePermission: (roleId: string, perm: PermissionKey) => void;
@@ -88,11 +91,13 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
   // Courier quick-add
   const [courierCode, setCourierCode] = useState('');
   const [courierName, setCourierName] = useState('');
+  const [courierUrl, setCourierUrl] = useState('');
 
   // Courier edit modal card state
   const [editingCourier, setEditingCourier] = useState<Courier | null>(null);
   const [editCourierCode, setEditCourierCode] = useState('');
   const [editCourierName, setEditCourierName] = useState('');
+  const [editCourierUrl, setEditCourierUrl] = useState('');
   const [editCourierError, setEditCourierError] = useState('');
 
   const openEditBranch = (b: Branch) => {
@@ -121,18 +126,20 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
     setEditingCourier(c);
     setEditCourierCode(c.code);
     setEditCourierName(c.name);
+    setEditCourierUrl(c.trackingUrl ?? '');
     setEditCourierError('');
   };
 
   const handleSaveCourierEdit = () => {
     if (!editCourierCode.trim() || !editCourierName.trim()) {
-      setEditCourierError('Sila lengkapkan kedua-dua medan: Courier Code dan Courier Name.');
+      setEditCourierError('Sila lengkapkan medan wajib: Courier Code dan Courier Name.');
       return;
     }
     if (!editingCourier) return;
     onUpdateCourier(editingCourier.id, {
       code: editCourierCode.trim().toUpperCase(),
       name: editCourierName.trim(),
+      trackingUrl: editCourierUrl.trim(),
     });
     setEditingCourier(null);
   };
@@ -402,14 +409,16 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
               onAddCourier({
                 code: courierCode.trim().toUpperCase(),
                 name: courierName.trim(),
+                trackingUrl: courierUrl.trim(),
                 active: true,
               });
               setCourierCode('');
               setCourierName('');
+              setCourierUrl('');
             }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-lg items-end text-xs"
+            className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-lg items-end text-xs"
           >
-            <div>
+            <div className="sm:col-span-2">
               <label htmlFor="new-cur-code" className="block font-medium text-slate-700 mb-1">
                 Courier Code
               </label>
@@ -422,7 +431,7 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
                 className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md font-mono-tabular"
               />
             </div>
-            <div>
+            <div className="sm:col-span-3">
               <label htmlFor="new-cur-name" className="block font-medium text-slate-700 mb-1">
                 Courier Name
               </label>
@@ -431,17 +440,32 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
                 type="text"
                 value={courierName}
                 onChange={(e) => setCourierName(e.target.value)}
-                placeholder="e.g. City-Link Express"
+                placeholder="e.g. Citylink"
                 className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md"
               />
             </div>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Courier
-            </button>
+            <div className="sm:col-span-5">
+              <label htmlFor="new-cur-url" className="block font-medium text-slate-700 mb-1">
+                Tracking URL
+              </label>
+              <input
+                id="new-cur-url"
+                type="text"
+                value={courierUrl}
+                onChange={(e) => setCourierUrl(e.target.value)}
+                placeholder="e.g. https://www.citylinkexpress.com/tracking-result/?track0="
+                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md font-mono-tabular"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Courier
+              </button>
+            </div>
           </form>
 
           <div className="overflow-x-auto border border-slate-200 rounded-lg">
@@ -451,20 +475,35 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
                   <th className="py-2.5 px-4">Code</th>
                   <th className="py-2.5 px-4">Courier Name</th>
                   <th className="py-2.5 px-4">Status</th>
+                  <th className="py-2.5 px-4">URL</th>
                   <th className="py-2.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {couriers.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/70">
-                    <td className="py-2.5 px-4 font-mono-tabular font-semibold text-slate-800">
+                    <td className="py-2.5 px-4 font-mono-tabular font-semibold text-slate-800 whitespace-nowrap">
                       {c.code}
                     </td>
-                    <td className="py-2.5 px-4 font-medium text-slate-900">{c.name}</td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-2.5 px-4 font-medium text-slate-900 whitespace-nowrap">
+                      {c.name}
+                    </td>
+                    <td className="py-2.5 px-4 whitespace-nowrap">
                       <StatusBadge status={c.active ? 'Active' : 'Inactive'} compact />
                     </td>
-                    <td className="py-2.5 px-4 text-right">
+                    <td className="py-2.5 px-4 max-w-[300px]">
+                      {c.trackingUrl ? (
+                        <span
+                          title={c.trackingUrl}
+                          className="block truncate font-mono-tabular text-[11px] text-blue-700"
+                        >
+                          {c.trackingUrl}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5 justify-end">
                         <button
                           type="button"
@@ -1054,7 +1093,7 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
         title="Edit Courier Card"
         subtitle={
           editingCourier
-            ? `Kemaskini Courier Code dan Courier Name bagi kurier ${editingCourier.name}`
+            ? `Kemaskini Courier Code, Courier Name dan Tracking URL bagi kurier ${editingCourier.name}`
             : undefined
         }
         footer={
@@ -1107,6 +1146,22 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
               placeholder="e.g. J&T Express"
               className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500"
             />
+          </div>
+          <div>
+            <label htmlFor="modal-edit-cur-url" className="block font-medium text-slate-700 mb-1">
+              Tracking URL
+            </label>
+            <input
+              id="modal-edit-cur-url"
+              type="text"
+              value={editCourierUrl}
+              onChange={(e) => setEditCourierUrl(e.target.value)}
+              placeholder="e.g. https://www.jtexpress.my/tracking/"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono-tabular bg-white text-slate-900 focus:outline-none focus:border-blue-500"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              No. tracking akan ditambah secara automatik selepas URL (jika berakhir dengan &quot;=&quot;, &quot;/&quot; atau &quot;?&quot;).
+            </p>
           </div>
         </div>
       </Modal>

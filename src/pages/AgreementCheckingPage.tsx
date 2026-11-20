@@ -52,6 +52,25 @@ const CHECKLIST_LABELS: { key: keyof CheckingChecklist; label: string }[] = [
   { key: 'cafDetails', label: '4. CAF details' },
 ];
 
+const NOW = new Date();
+const DEFAULT_CURRENT_YEAR = String(NOW.getFullYear());
+const DEFAULT_CURRENT_MONTH = String(NOW.getMonth() + 1).padStart(2, '0');
+
+const MONTH_NAMES: { value: string; label: string }[] = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+
 export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
   applications,
   branches,
@@ -61,6 +80,8 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
   onSaveRemarksOnly,
 }) => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | CheckingStatus>('ALL');
+  const [monthFilter, setMonthFilter] = useState(DEFAULT_CURRENT_MONTH);
+  const [yearFilter, setYearFilter] = useState(DEFAULT_CURRENT_YEAR);
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,22 +108,42 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
     [applications],
   );
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>([DEFAULT_CURRENT_YEAR]);
+    receivedApps.forEach((a) => {
+      const dateStr = a.agreement.receivedAt || a.approvalDate || a.applicationDate;
+      const y = dateStr.slice(0, 4);
+      if (y) years.add(y);
+    });
+    return Array.from(years).sort().reverse();
+  }, [receivedApps]);
+
+  const periodReceivedApps = useMemo(() => {
+    return receivedApps.filter((app) => {
+      const dateStr = (app.agreement.receivedAt || app.approvalDate || app.applicationDate).slice(0, 7);
+      const [y, m] = dateStr.split('-');
+      if (yearFilter && y !== yearFilter) return false;
+      if (monthFilter && m !== monthFilter) return false;
+      return true;
+    });
+  }, [receivedApps, yearFilter, monthFilter]);
+
   const counts = useMemo(
     () => ({
-      totalReceived: receivedApps.length,
-      pending: receivedApps.filter((a) => a.agreement.checkingStatus === 'Pending Checking').length,
-      inProgress: receivedApps.filter(
+      totalReceived: periodReceivedApps.length,
+      pending: periodReceivedApps.filter((a) => a.agreement.checkingStatus === 'Pending Checking').length,
+      inProgress: periodReceivedApps.filter(
         (a) => a.agreement.checkingStatus === 'Checking in Progress',
       ).length,
-      passed: receivedApps.filter((a) => a.agreement.checkingStatus === 'Checking Passed').length,
-      failed: receivedApps.filter((a) => a.agreement.checkingStatus === 'Checking Failed').length,
+      passed: periodReceivedApps.filter((a) => a.agreement.checkingStatus === 'Checking Passed').length,
+      failed: periodReceivedApps.filter((a) => a.agreement.checkingStatus === 'Checking Failed').length,
     }),
-    [receivedApps],
+    [periodReceivedApps],
   );
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return receivedApps.filter((app) => {
+    return periodReceivedApps.filter((app) => {
       if (statusFilter !== 'ALL' && app.agreement.checkingStatus !== statusFilter) return false;
       if (q) {
         const hit =
@@ -114,7 +155,7 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
       if (branchFilter !== 'ALL' && app.pickupBranchId !== branchFilter) return false;
       return true;
     });
-  }, [receivedApps, statusFilter, searchTerm, branchFilter]);
+  }, [periodReceivedApps, statusFilter, searchTerm, branchFilter]);
 
   const paginated = useMemo(() => {
     const safePage = Math.min(currentPage, Math.max(1, Math.ceil(filtered.length / pageSize)));
@@ -181,8 +222,8 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
 
       {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-xl p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+          <div className="lg:col-span-4">
             <label htmlFor="chk-search" className="block text-[11px] font-medium text-slate-500 mb-1">
               Search CASE ID, Name, or IC
             </label>
@@ -202,7 +243,7 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="lg:col-span-3">
             <label htmlFor="chk-branch" className="block text-[11px] font-medium text-slate-500 mb-1">
               Pickup Branch
             </label>
@@ -224,19 +265,66 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center justify-end">
+          <div className="lg:col-span-2">
+            <label htmlFor="chk-month" className="block text-[11px] font-medium text-slate-500 mb-1">
+              Month
+            </label>
+            <select
+              id="chk-month"
+              value={monthFilter}
+              onChange={(e) => {
+                setMonthFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500"
+            >
+              <option value="">All Months</option>
+              {MONTH_NAMES.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-2">
+            <label htmlFor="chk-year" className="block text-[11px] font-medium text-slate-500 mb-1">
+              Year
+            </label>
+            <select
+              id="chk-year"
+              value={yearFilter}
+              onChange={(e) => {
+                setYearFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500"
+            >
+              <option value="">All Years</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-1 flex items-center justify-end">
             <button
               type="button"
               onClick={() => {
                 setStatusFilter('ALL');
                 setSearchTerm('');
                 setBranchFilter('ALL');
+                setMonthFilter(DEFAULT_CURRENT_MONTH);
+                setYearFilter(DEFAULT_CURRENT_YEAR);
                 setCurrentPage(1);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
+              title="Reset Filters"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 rounded-lg whitespace-nowrap"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset Filters
+              Reset
             </button>
           </div>
         </div>
@@ -246,12 +334,15 @@ export const AgreementCheckingPage: React.FC<AgreementCheckingPageProps> = ({
       {filtered.length === 0 ? (
         <EmptyState
           title="No received agreements in this checking view"
-          description="Receive eligible agreements in Agreement Receive (TERIMA) or adjust your status filter."
+          description="Receive eligible agreements in Agreement Receive (TERIMA) or adjust your month, year, or status filter."
           actionLabel="Show All Received"
           onAction={() => {
             setStatusFilter('ALL');
             setSearchTerm('');
             setBranchFilter('ALL');
+            setMonthFilter('');
+            setYearFilter('');
+            setCurrentPage(1);
           }}
         />
       ) : (

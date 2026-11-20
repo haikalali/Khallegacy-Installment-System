@@ -51,11 +51,55 @@ export const INITIAL_BRANCHES: Branch[] = [
 ];
 
 export const INITIAL_COURIERS: Courier[] = [
-  { id: 'cur-jt', name: 'J&T Express', code: 'JTE', active: true },
-  { id: 'cur-pos', name: 'PosLaju', code: 'POS', active: true },
-  { id: 'cur-dhl', name: 'DHL eCommerce', code: 'DHL', active: true },
-  { id: 'cur-gdex', name: 'GDex', code: 'GDX', active: true },
-  { id: 'cur-nv', name: 'Ninjavan', code: 'NJV', active: false },
+  {
+    id: 'cur-gdex',
+    name: 'GDex',
+    code: 'GDX',
+    active: true,
+    trackingUrl: 'https://gdexpress.com/tracking/?consignmentno=',
+  },
+  {
+    id: 'cur-jt',
+    name: 'J&T Express',
+    code: 'JTE',
+    active: true,
+    trackingUrl: 'https://www.jtexpress.my/tracking/',
+  },
+  {
+    id: 'cur-ctl',
+    name: 'Citylink',
+    code: 'CTL',
+    active: true,
+    trackingUrl: 'https://www.citylinkexpress.com/tracking-result/?track0=',
+  },
+  {
+    id: 'cur-spx',
+    name: 'Shopee',
+    code: 'SPX',
+    active: true,
+    trackingUrl: 'https://spx.com.my/track',
+  },
+  {
+    id: 'cur-pos',
+    name: 'PosLaju',
+    code: 'POS',
+    active: true,
+    trackingUrl: 'https://tracking.pos.com.my/tracking/',
+  },
+  {
+    id: 'cur-dhl',
+    name: 'DHL eCommerce',
+    code: 'DHL',
+    active: true,
+    trackingUrl: 'https://ecommerceportal.dhl.com/track/?locale=en&trackingNumber=',
+  },
+  {
+    id: 'cur-nv',
+    name: 'Ninjavan',
+    code: 'NJV',
+    active: false,
+    trackingUrl: 'https://www.ninjavan.co/en-my/tracking?id=',
+  },
 ];
 
 export const INITIAL_ROLES: RoleConfig[] = [

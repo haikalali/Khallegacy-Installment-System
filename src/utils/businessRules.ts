@@ -4,6 +4,7 @@ import type {
   Branch,
   CheckingChecklist,
   CollectionConfirmationStatus,
+  Courier,
   CustomerStockDecision,
   FinancingInfo,
   InstallmentApplication,
@@ -1481,6 +1482,9 @@ export interface UpdateApplicationDetailsPayload {
   installmentDuration: number;
   monthlyInstallment: number;
   taskStatus?: TaskStatusState;
+  checkingStaff1?: string;
+  checkingStaff2?: string;
+  invoiceNumber?: string;
 }
 
 export function updateApplicationDetailsTransition(
@@ -1589,6 +1593,18 @@ export function updateApplicationDetailsTransition(
   const nextTaskStatus: TaskStatusState = payload.taskStatus
     ? { ...payload.taskStatus }
     : prevTaskStatus;
+  const nextCheckingStaff1 =
+    payload.checkingStaff1 !== undefined
+      ? payload.checkingStaff1.trim()
+      : (current.agreement.checkingStaff1 ?? '');
+  const nextCheckingStaff2 =
+    payload.checkingStaff2 !== undefined
+      ? payload.checkingStaff2.trim()
+      : (current.agreement.checkingStaff2 ?? '');
+  const nextInvoiceNumber =
+    payload.invoiceNumber !== undefined
+      ? payload.invoiceNumber.trim()
+      : (current.agreement.invoiceNumber ?? '');
 
   const diffs: { label: string; before: string; after: string }[] = [
     { label: 'CASE ID', before: current.caseId, after: trimmedCaseId },
@@ -1717,6 +1733,21 @@ export function updateApplicationDetailsTransition(
       after: nextTaskStatus.agreementChecking,
     },
     {
+      label: 'Agreement Checking (Staff 1)',
+      before: current.agreement.checkingStaff1 || '—',
+      after: nextCheckingStaff1 || '—',
+    },
+    {
+      label: 'Agreement Checking (Staff 2)',
+      before: current.agreement.checkingStaff2 || '—',
+      after: nextCheckingStaff2 || '—',
+    },
+    {
+      label: 'Agreement Checking (No. Invoice)',
+      before: current.agreement.invoiceNumber || '—',
+      after: nextInvoiceNumber || '—',
+    },
+    {
       label: 'Task Status (Agreement Submission)',
       before: prevTaskStatus.agreementSubmission,
       after: nextTaskStatus.agreementSubmission,
@@ -1790,6 +1821,12 @@ export function updateApplicationDetailsTransition(
       collectionConfirmation: nextTaskStatus.collectionConfirmation,
     },
     taskStatus: nextTaskStatus,
+    agreement: {
+      ...current.agreement,
+      checkingStaff1: nextCheckingStaff1,
+      checkingStaff2: nextCheckingStaff2,
+      invoiceNumber: nextInvoiceNumber,
+    },
     timeline: [event, ...current.timeline],
   };
 }
@@ -1936,21 +1973,63 @@ export function createSaleSubmissionTransition(
   return { submission, applications };
 }
 
-export function buildCourierTrackingUrl(courier: string, trackingNumber: string): string {
+export function resolveTrackingUrlFromBase(baseUrl: string, trackingNumber: string): string {
+  const cleanBase = baseUrl.trim();
+  const trk = encodeURIComponent(trackingNumber.trim());
+  if (!cleanBase) {
+    return `https://www.tracking.my/track/${trk}`;
+  }
+  if (cleanBase.includes('{tracking}')) {
+    return cleanBase.replace(/\{tracking\}/g, trk);
+  }
+  if (!trk) {
+    return cleanBase;
+  }
+  if (cleanBase.endsWith('=') || cleanBase.endsWith('/') || cleanBase.endsWith('?')) {
+    return `${cleanBase}${trk}`;
+  }
+  return cleanBase;
+}
+
+export function buildCourierTrackingUrl(
+  courier: string,
+  trackingNumber: string,
+  couriers?: Courier[],
+): string {
   const trk = encodeURIComponent(trackingNumber.trim());
   const normalized = courier.trim().toLowerCase();
 
+  if (couriers && couriers.length > 0) {
+    const matched =
+      couriers.find((c) => c.name.trim().toLowerCase() === normalized) ??
+      couriers.find(
+        (c) =>
+          c.code.trim().toLowerCase() === normalized ||
+          normalized.includes(c.name.trim().toLowerCase()) ||
+          c.name.trim().toLowerCase().includes(normalized),
+      );
+    if (matched?.trackingUrl && matched.trackingUrl.trim()) {
+      return resolveTrackingUrlFromBase(matched.trackingUrl, trackingNumber);
+    }
+  }
+
+  if (normalized.includes('gdex')) {
+    return `https://gdexpress.com/tracking/?consignmentno=${trk}`;
+  }
   if (normalized.includes('j&t') || normalized.includes('jte')) {
     return `https://www.jtexpress.my/tracking/${trk}`;
   }
+  if (normalized.includes('citylink') || normalized.includes('city-link') || normalized === 'ctl') {
+    return `https://www.citylinkexpress.com/tracking-result/?track0=${trk}`;
+  }
+  if (normalized.includes('shopee') || normalized === 'spx') {
+    return 'https://spx.com.my/track';
+  }
   if (normalized.includes('poslaju') || normalized.includes('pos laju') || normalized === 'pos') {
-    return `https://tracking.pos.com.my/postal-services/quick-access/?track-trace=${trk}`;
+    return `https://tracking.pos.com.my/tracking/${trk}`;
   }
   if (normalized.includes('dhl')) {
     return `https://ecommerceportal.dhl.com/track/?locale=en&trackingNumber=${trk}`;
-  }
-  if (normalized.includes('gdex')) {
-    return `https://www.gdexpress.com/malaysia/e-tracking/?consignment=${trk}`;
   }
   if (normalized.includes('ninja')) {
     return `https://www.ninjavan.co/en-my/tracking?id=${trk}`;

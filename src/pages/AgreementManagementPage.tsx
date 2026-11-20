@@ -42,6 +42,42 @@ export const AgreementManagementPage: React.FC<AgreementManagementPageProps> = (
     [applications],
   );
 
+  const branchSummary = useMemo(() => {
+    const countsByBranch = new Map<string, number>();
+    for (const app of eligibleApps) {
+      const key =
+        app.pickupBranchId && app.pickupBranchId.trim().length > 0
+          ? app.pickupBranchId
+          : 'UNASSIGNED';
+      countsByBranch.set(key, (countsByBranch.get(key) ?? 0) + 1);
+    }
+
+    const rows: { key: string; code: string; name: string; count: number }[] = [];
+    for (const b of branches) {
+      const count = countsByBranch.get(b.id) ?? 0;
+      if (b.active || count > 0) {
+        rows.push({
+          key: b.id,
+          code: b.code,
+          name: b.name,
+          count,
+        });
+      }
+      countsByBranch.delete(b.id);
+    }
+
+    countsByBranch.forEach((count, key) => {
+      rows.push({
+        key,
+        code: key === 'UNASSIGNED' ? '—' : key,
+        name: key === 'UNASSIGNED' ? 'Belum Ditentukan' : key,
+        count,
+      });
+    });
+
+    return rows.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [eligibleApps, branches]);
+
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return eligibleApps.filter((app) => {
@@ -77,42 +113,125 @@ export const AgreementManagementPage: React.FC<AgreementManagementPageProps> = (
 
   return (
     <div className="space-y-5">
-      {/* Prominent Summary Card + Business Rule Banner */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div
-          data-testid="agreement-to-be-receive-card"
-          className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between gap-4"
-        >
-          <div>
-            <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-              AGREEMENT TO BE RECEIVE
-            </p>
-            <p
-              data-testid="agreement-to-be-receive-count"
-              className="text-3xl font-bold text-amber-600 tabular-nums mt-1.5"
-            >
-              {eligibleApps.length}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Eligible agreements awaiting HQ TERIMA receipt
-            </p>
+      {/* Prominent Summary Card + Agreement to be Receive by Branch Table + Eligibility Gate */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          <div
+            data-testid="agreement-to-be-receive-card"
+            className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between gap-4"
+          >
+            <div>
+              <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+                AGREEMENT TO BE RECEIVE
+              </p>
+              <p
+                data-testid="agreement-to-be-receive-count"
+                className="text-3xl font-bold text-amber-600 tabular-nums mt-1.5"
+              >
+                {eligibleApps.length}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Eligible agreements awaiting HQ TERIMA receipt
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <FileCheck2 className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <FileCheck2 className="w-6 h-6" />
+
+          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3 flex-1">
+            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <p className="font-semibold text-slate-900">Eligibility Gate (Stock &amp; Pass Date)</p>
+              <p className="text-slate-600 leading-relaxed">
+                An approved application appears in this queue only when <strong>every product</strong>{' '}
+                in the order has <strong>Stock Status = OK</strong> and a filled{' '}
+                <strong>Date Pass Stock</strong>. Clicking <strong>TERIMA</strong> records receipt
+                staff, date/time, and moves the record into Agreement Checking while preserving full
+                audit history.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 flex items-start gap-3">
-          <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-xs space-y-1">
-            <p className="font-semibold text-slate-900">Eligibility Gate (Stock &amp; Pass Date)</p>
-            <p className="text-slate-600 leading-relaxed">
-              An approved application appears in this queue only when <strong>every product</strong>{' '}
-              in the order has <strong>Stock Status = OK</strong> and a filled{' '}
-              <strong>Date Pass Stock</strong>. Clicking <strong>TERIMA</strong> records receipt
-              staff, date/time, and moves the record into Agreement Checking while preserving full
-              audit history.
-            </p>
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
+                Agreement to be Receive by Branch
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Klik cawangan untuk menapis senarai perjanjian di bawah
+              </p>
+            </div>
+            {pickupFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPickupFilter('ALL');
+                  setCurrentPage(1);
+                }}
+                className="text-[11px] font-medium text-blue-600 hover:underline"
+              >
+                Show All
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-4">Code</th>
+                  <th className="py-2.5 px-4">Pickup Branch</th>
+                  <th className="py-2.5 px-4 text-right">To Be Receive</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {branchSummary.map((row) => {
+                  const isSelected = pickupFilter === row.key;
+                  return (
+                    <tr
+                      key={row.key}
+                      onClick={() => {
+                        setPickupFilter((prev) => (prev === row.key ? 'ALL' : row.key));
+                        setCurrentPage(1);
+                      }}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-amber-50/70' : 'hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <td className="py-2 px-4 font-mono-tabular font-semibold text-slate-600 whitespace-nowrap">
+                        {row.code}
+                      </td>
+                      <td className="py-2 px-4 font-medium text-slate-900 whitespace-nowrap">
+                        {row.name}
+                      </td>
+                      <td className="py-2 px-4 text-right tabular-nums whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-md font-semibold ${
+                            row.count > 0
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {row.count}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 border-t border-slate-200 font-semibold text-slate-900">
+                  <td colSpan={2} className="py-2 px-4 text-[11px] uppercase tracking-wider">
+                    Total Agreement to be Receive
+                  </td>
+                  <td className="py-2 px-4 text-right tabular-nums text-amber-700">
+                    {eligibleApps.length}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </div>

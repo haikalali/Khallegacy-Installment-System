@@ -16,6 +16,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
   X,
 } from 'lucide-react';
 import type { PageId, PermissionKey } from '../types/khallegacy';
@@ -42,6 +43,7 @@ interface SidebarProps {
   mobileOpen: boolean;
   onCloseMobile: () => void;
   hasPermission: (perm: PermissionKey) => boolean;
+  onLogout: () => void;
   counts: {
     todayNewApplications: number;
     stockPending: number;
@@ -61,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onCloseMobile,
   hasPermission,
+  onLogout,
   counts,
 }) => {
   const sections: NavSection[] = [
@@ -217,9 +220,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-3 text-left min-w-0 focus:outline-none"
             title="Khallegacy Installment System"
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">
-              K
-            </div>
+            <img
+              src="/khallegacy-logo.png"
+              alt="Khallegacy"
+              className="w-9 h-9 rounded-full object-cover shrink-0 shadow-sm"
+            />
             {!isCompact && (
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-white tracking-tight truncate">
@@ -341,20 +346,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Bottom Collapse Expand Control when collapsed */}
-        {isCompact && !isMobile && (
-          <div className="p-2.5 border-t border-slate-800/80 flex justify-center">
+        {/* Bottom Footer: Log Out & Collapse Expand Control */}
+        <div className="p-2.5 border-t border-slate-800/80 space-y-1.5 shrink-0">
+          {isCompact && !isMobile ? (
+            <>
+              <div className="relative group flex justify-center">
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  aria-label="Log Out"
+                  title="Log Out"
+                  className="p-2 rounded-lg text-slate-300 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+                <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity fixed left-[74px] z-50 px-2.5 py-1.5 rounded-md bg-slate-900 border border-slate-700 text-xs font-medium text-white shadow-lg whitespace-nowrap">
+                  Log Out
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="Expand sidebar"
+                  title="Expand sidebar"
+                  className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={onToggleCollapse}
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              onClick={() => {
+                if (isMobile) onCloseMobile();
+                onLogout();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium text-slate-300 hover:text-red-300 hover:bg-red-500/10 transition-colors whitespace-nowrap"
             >
-              <PanelLeftOpen className="w-4 h-4" />
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Log Out</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };

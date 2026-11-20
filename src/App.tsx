@@ -71,6 +71,14 @@ import { ClaimedHistoryPage } from './pages/ClaimedHistoryPage';
 import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage';
 import { UserPermissionsPage } from './pages/UserPermissionsPage';
 import { SystemSettingsPage } from './pages/SystemSettingsPage';
+import {
+  authenticateStaff,
+  clearAuthUserId,
+  getSavedAuthUserId,
+  saveAuthUserId,
+  type AuthResult,
+} from './utils/auth';
+import { LoginPage } from './pages/LoginPage';
 import { ErrorState } from './components/StateViews';
 
 export default function App() {
@@ -84,8 +92,19 @@ export default function App() {
   );
   const [systemPrefs, setSystemPrefs] = useState<SystemPreferences>(INITIAL_SYSTEM_PREFS);
 
-  const [currentUserId, setCurrentUserId] = useState<string>('usr-1');
+  const initialSavedUser = useMemo(() => {
+    const savedId = getSavedAuthUserId();
+    if (!savedId) return null;
+    const found = INITIAL_USERS.find((u) => u.id === savedId && u.status === 'Active');
+    return found ?? null;
+  }, []);
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(initialSavedUser));
+  const [currentUserId, setCurrentUserId] = useState<string>(
+    () => initialSavedUser?.id ?? INITIAL_USERS[0].id,
+  );
   const [activePage, setActivePage] = useState<PageId>('dashboard');
+  const [lastPageBeforeDetails, setLastPageBeforeDetails] = useState<PageId>('approval-list');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -132,11 +151,17 @@ export default function App() {
     [],
   );
 
-  const openApplicationDetails = useCallback((appId: string) => {
-    setSelectedAppId(appId);
-    setActivePage('approval-details');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  const openApplicationDetails = useCallback(
+    (appId: string) => {
+      if (activePage !== 'approval-details') {
+        setLastPageBeforeDetails(activePage);
+      }
+      setSelectedAppId(appId);
+      setActivePage('approval-details');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [activePage],
+  );
 
   const recentActivities = useMemo<ActivityEvent[]>(() => {
     return applications
@@ -166,7 +191,7 @@ export default function App() {
         if (a.approvalStatus !== 'Approved') return false;
         const followUp = deriveStockFollowUp(a);
         if (followUp.customerDecision === 'CANCELLED') return false;
-        return !a.products.every((p) => Boolean(p.datePassStock));
+        return followUp.collectionConfirmation === 'PENDING';
       }).length,
     [applications],
   );
@@ -177,62 +202,30 @@ export default function App() {
   );
 
   // Handlers
-  const downloadApplicationCoverPage = (app: InstallmentApplication) => {
-    const branchLabel = (id: string | null) => {
-      if (!id) return 'Belum Ditentukan';
-      if (id === 'WEB' || id === 'POSTAGE') return id;
-      return branches.find((b) => b.id === id)?.name ?? id;
-    };
-    const lines = [
-      '====================================================================',
-      'KHALLEGACY INSTALLMENT SYSTEM — APPLICATION COVER PAGE',
-      '====================================================================',
-      `CASE ID              : ${app.caseId}`,
-      `Application Date     : ${app.applicationDate}`,
-      `Initial Status       : ${app.approvalStatus}`,
-      `Entered By           : ${currentUser.name}`,
-      '',
-      '--- 01. CUSTOMER INFORMATION ---',
-      `Customer Name        : ${app.customerName}`,
-      `IC Number            : ${app.icNumber}`,
-      `Phone Number         : ${app.phone}`,
-      `REF1 ID              : ${app.ref1Id}`,
-      `From Branch          : ${branchLabel(app.customerFromBranchId)}`,
-      `Pickup Branch        : ${branchLabel(app.pickupBranchId)}`,
-      `Bank Name            : ${app.bankName || '—'}`,
-      `Bank Account No.     : ${app.bankAccountNumber || '—'}`,
-      `Remarks              : ${app.applicationRemarks || '—'}`,
-      '',
-      '--- 02. PRODUCT INFORMATION ---',
-      ...app.products.map(
-        (p, idx) =>
-          `${idx + 1}. ${p.productName} (${p.model}) | Qty: ${p.quantity} × ${formatRM(
-            p.productPrice,
-          )} = ${formatRM(p.quantity * p.productPrice)}`,
-      ),
-      '',
-      '--- 03. FINANCING INFORMATION ---',
-      `Total Product Price  : ${formatRM(app.financing.totalProductPrice)}`,
-      `Deposit              : ${formatRM(app.financing.deposit)}`,
-      `Financing Amount     : ${formatRM(app.financing.financingAmount)}`,
-      `Agreement Fee        : ${formatRM(app.financing.agreementFee)}`,
-      `Processing Fee       : ${formatRM(app.financing.processingFee)}`,
-      `SST Amount           : ${formatRM(app.financing.sstAmount)}`,
-      `Stamp Duty Fee       : ${formatRM(app.financing.stampDutyFee)}`,
-      `Actual Cash Payment  : ${formatRM(app.financing.actualCashPayment ?? 0)}`,
-      '',
-      '--- 04. COLLECTION & INTERNAL NOTES ---',
-      `Internal Notes       : ${app.internalNotes || '—'}`,
-      '====================================================================',
-    ].join('\n');
-
-    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${app.caseId}-Cover-Page.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const triggerCoverPagePdfDownload = async (
+    app: InstallmentApplication,
+    showDownloadToast: boolean,
+  ) => {
+    try {
+      const blob = await buildCoverPagePdfBlob(app, branches, users);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${app.caseId}-COVER-PAGE.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (showDownloadToast) {
+        addToast('info', 'COVER PAGE.pdf Downloaded', `${app.caseId}-COVER-PAGE.pdf`);
+      }
+    } catch (err) {
+      addToast(
+        'error',
+        'Cover Page PDF Failed',
+        err instanceof Error ? err.message : 'Unable to generate Cover Page PDF.',
+      );
+    }
   };
 
   const handleCreateApplication = (
@@ -244,12 +237,12 @@ export default function App() {
       const created = createNewApplicationTransition(applications, payload, currentUser, nowIso);
       setApplications((prev) => [created, ...prev]);
       if (downloadCoverPage) {
-        downloadApplicationCoverPage(created);
+        void triggerCoverPagePdfDownload(created, false);
       }
       addToast(
         'success',
         `Application ${created.caseId} Saved`,
-        'Added to Approval List (Approved) & Cover Page downloaded.',
+        'Added to Approval List (Approved) & Cover Page PDF downloaded.',
       );
       return true;
     } catch (err) {
@@ -623,29 +616,32 @@ export default function App() {
   };
 
   const handleDownloadCoverPagePdf = (app: InstallmentApplication) => {
-    const blob = buildCoverPagePdfBlob(app, branches, users);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${app.caseId}-COVER-PAGE.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    addToast('info', 'COVER PAGE.pdf Downloaded', `${app.caseId}-COVER-PAGE.pdf`);
+    void triggerCoverPagePdfDownload(app, true);
   };
 
-  const handleDownloadSaleSubmissionPdf = (submission: SaleSubmissionList) => {
+  const handleDownloadSaleSubmissionPdf = async (submission: SaleSubmissionList) => {
     const appMap = new Map(applications.map((a) => [a.id, a]));
     const apps = submission.agreementIds
       .map((id) => appMap.get(id))
       .filter((a): a is InstallmentApplication => Boolean(a));
-    const blob = buildSaleSubmissionPdfBlob(submission, apps);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${submission.submissionListId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    addToast('success', 'Submission List Downloaded', `${submission.submissionListId}.pdf`);
+    try {
+      const blob = await buildSaleSubmissionPdfBlob(submission, apps);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${submission.submissionListId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      addToast('success', 'Submission List Downloaded', `${submission.submissionListId}.pdf`);
+    } catch (err) {
+      addToast(
+        'error',
+        'Submission List PDF Failed',
+        err instanceof Error ? err.message : 'Unable to generate Sale Submission PDF.',
+      );
+    }
   };
 
   const handleExportCsv = (filename: string, rows: string[][]) => {
@@ -762,7 +758,7 @@ export default function App() {
 
   const handleUpdateCourier = (
     id: string,
-    payload: { code: string; name: string },
+    payload: { code: string; name: string; trackingUrl: string },
   ) => {
     setCouriers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...payload } : c)),
@@ -784,6 +780,7 @@ export default function App() {
 
   const handleSwitchUser = (userId: string) => {
     setCurrentUserId(userId);
+    saveAuthUserId(userId, false);
     const nextUser = users.find((u) => u.id === userId);
     const nextRole = roles.find((r) => r.id === nextUser?.roleId);
     addToast(
@@ -792,6 +789,42 @@ export default function App() {
       `Active Role: ${nextRole?.name}. Permissions updated.`,
     );
     setActivePage('dashboard');
+  };
+
+  const handleLogin = (
+    identifier: string,
+    password: string,
+    remember: boolean,
+  ): AuthResult => {
+    const result = authenticateStaff(users, identifier, password);
+    if (!result.ok) {
+      return result;
+    }
+    const nowIso = new Date().toISOString().slice(0, 19);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === result.user.id ? { ...u, lastActive: nowIso } : u)),
+    );
+    setCurrentUserId(result.user.id);
+    saveAuthUserId(result.user.id, remember);
+    setIsAuthenticated(true);
+    setSelectedAppId(null);
+    setActivePage('dashboard');
+    const role = roles.find((r) => r.id === result.user.roleId);
+    addToast(
+      'success',
+      `Welcome, ${result.user.name}`,
+      `Signed in as ${role?.name ?? 'Staff'}.`,
+    );
+    return result;
+  };
+
+  const handleLogout = () => {
+    clearAuthUserId();
+    setIsAuthenticated(false);
+    setMobileSidebarOpen(false);
+    setSelectedAppId(null);
+    setActivePage('dashboard');
+    addToast('info', 'Logged Out', 'You have been signed out of Khallegacy System.');
   };
 
   const renderPage = () => {
@@ -803,6 +836,7 @@ export default function App() {
         <DashboardPage
           applications={applications}
           branches={branches}
+          saleSubmissions={saleSubmissions}
           recentActivities={recentActivities}
           onNavigate={navigateTo}
           onSelectApplication={openApplicationDetails}
@@ -875,7 +909,7 @@ export default function App() {
           users={users}
           postageTrackings={postageTrackings}
           currentUserName={currentUser.name}
-          onBack={() => navigateTo('approval-list')}
+          onBack={() => navigateTo(lastPageBeforeDetails)}
           onUpdateDetails={handleUpdateApplicationDetails}
           onDeleteApplication={handleDeleteApplication}
           onDownloadCoverPage={handleDownloadCoverPagePdf}
@@ -1067,6 +1101,20 @@ export default function App() {
     );
   };
 
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage
+          users={users}
+          roles={roles}
+          branches={branches}
+          onLogin={handleLogin}
+        />
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <Sidebar
@@ -1077,6 +1125,7 @@ export default function App() {
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
         hasPermission={hasPermission}
+        onLogout={handleLogout}
         counts={{
           todayNewApplications: todayNewApplicationsCount,
           stockPending: stockPendingCount,
@@ -1103,6 +1152,7 @@ export default function App() {
           allRoles={roles}
           branches={branches}
           onSwitchUser={handleSwitchUser}
+          onLogout={handleLogout}
         />
 
         <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
