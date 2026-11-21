@@ -96,12 +96,10 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
     return () => { active = false; };
   }, [canManage, loadOverrides]);
 
-  const selectedTarget = targets.find((target) => target.id === selectedStaffId);
   const visiblePermissions = permissions;
 
   const changeTarget = async (staffId: string) => {
     setSelectedStaffId(staffId);
-    const target = targets.find((item) => item.id === staffId);
     setSelectedPermission('');
     setError('');
     setNotice('');
