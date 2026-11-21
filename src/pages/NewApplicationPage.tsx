@@ -76,8 +76,6 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
   const [sstAmountStr, setSstAmountStr] = useState('4.00');
   const [stampDutyEdited, setStampDutyEdited] = useState(false);
   const [stampDutyManualStr, setStampDutyManualStr] = useState('0.00');
-  const [cashPaymentEdited, setCashPaymentEdited] = useState(false);
-  const [cashPaymentManualStr, setCashPaymentManualStr] = useState('0.00');
   const [installmentDuration, setInstallmentDuration] = useState<12 | 24 | 36>(24);
   const [monthlyInstallmentEdited, setMonthlyInstallmentEdited] = useState(false);
   const [monthlyInstallmentManualStr, setMonthlyInstallmentManualStr] = useState('0.00');
@@ -104,7 +102,6 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
       processingFee: Number(processingFeeStr) || 0,
       sstAmount: Number(sstAmountStr) || 0,
       stampDutyOverride: stampDutyEdited ? Number(stampDutyManualStr) || 0 : null,
-      cashPaymentOverride: cashPaymentEdited ? Number(cashPaymentManualStr) || 0 : null,
       monthlyInstallmentOverride: monthlyInstallmentEdited
         ? Number(monthlyInstallmentManualStr) || 0
         : null,
@@ -118,8 +115,6 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     sstAmountStr,
     stampDutyEdited,
     stampDutyManualStr,
-    cashPaymentEdited,
-    cashPaymentManualStr,
     installmentDuration,
     monthlyInstallmentEdited,
     monthlyInstallmentManualStr,
@@ -900,38 +895,19 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="fin-cash-payment" className="font-medium text-slate-700">
-                      Actual Cash Payment (RM)
-                    </label>
-                    {cashPaymentEdited && (
-                      <button
-                        type="button"
-                        onClick={() => setCashPaymentEdited(false)}
-                        className="text-[11px] text-blue-600 hover:underline"
-                      >
-                        Reset Auto
-                      </button>
-                    )}
-                  </div>
+                  <label htmlFor="fin-cash-payment" className="font-medium text-slate-700">
+                    Actual Cash Payment (RM)
+                  </label>
                   <input
                     id="fin-cash-payment"
                     type="number"
-                    min={0}
-                    step="0.01"
-                    value={
-                      cashPaymentEdited
-                        ? cashPaymentManualStr
-                        : financingCalc.actualCashPayment.toFixed(2)
-                    }
-                    onChange={(e) => {
-                      setCashPaymentEdited(true);
-                      setCashPaymentManualStr(e.target.value);
-                    }}
-                    className="w-full px-3 py-2 text-xs font-mono-tabular font-semibold border border-emerald-200 rounded-lg bg-emerald-50/50 text-emerald-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    value={financingCalc.actualCashPayment.toFixed(2)}
+                    readOnly
+                    aria-readonly="true"
+                    className="mt-1 w-full px-3 py-2 text-xs font-mono-tabular font-semibold border border-emerald-200 rounded-lg bg-emerald-50/50 text-emerald-900"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Auto: Financing Amount − Processing − SST − Stamp Duty. Boleh diedit manual.
+                    Auto: Financing Amount − Processing Fee − SST − Stamp Duty. Tidak boleh diedit manual.
                   </p>
                 </div>
 
