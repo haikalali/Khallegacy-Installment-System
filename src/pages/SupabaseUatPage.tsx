@@ -4,6 +4,7 @@ import { loadSupabaseWorkspaceDirectory, type SupabaseWorkspaceDirectory } from 
 import { supabase } from '../lib/supabase';
 import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
 import { NewApplicationPage } from './NewApplicationPage';
+import { ToBeClaimedUatPage } from './ToBeClaimedUatPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
 import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
@@ -18,6 +19,7 @@ export function SupabaseUatPage() {
   const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
   const [applicationError, setApplicationError] = useState('');
   const [applicationSaving, setApplicationSaving] = useState(false);
+  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed'>('home');
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,6 +30,7 @@ export function SupabaseUatPage() {
     try {
       const signedIn = await loginWithSupabase(identifier, password);
       setSession(signedIn);
+      setActiveUatModule('home');
       const [directory, caseIds] = await Promise.all([
         loadSupabaseWorkspaceDirectory(),
         loadSupabaseApplicationCaseIds(),
@@ -88,6 +91,7 @@ export function SupabaseUatPage() {
       await logoutFromSupabase();
       setSession(null);
       setWorkspace(null);
+      setActiveUatModule('home');
       setIdentifier('');
       setPassword('');
       setError('');
@@ -137,12 +141,24 @@ export function SupabaseUatPage() {
             </dl>
             <h3 className="mt-5 text-sm font-semibold">Effective permissions ({session.roles.find((r) => r.id === session.user.roleId)?.permissions.length ?? 0})</h3>
             <div className="mt-2 flex flex-wrap gap-2">{(session.roles.find((r) => r.id === session.user.roleId)?.permissions ?? []).map((permission) => <span key={permission} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">{permission}</span>)}</div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('create_application') && (
+                <button type="button" onClick={() => setActiveUatModule('home')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'home' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>New Application</button>
+              )}
+              {(session.roles.find((r) => r.id === session.user.roleId)?.permissions.some((permission) => permission === 'manage_to_be_claimed' || permission === 'manage_agreement')) && (
+                <button type="button" onClick={() => setActiveUatModule('to-be-claimed')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'to-be-claimed' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>To Be Claimed</button>
+              )}
+            </div>
           </section>
         )}
 
         {session && <ManagerPermissionOverrides session={session} />}
 
-        {session && workspace && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
+        {session && activeUatModule === 'to-be-claimed' && (
+          <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
+        )}
+
+        {session && activeUatModule === 'home' && workspace && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -164,13 +180,13 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        {session && !session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
+        {session && activeUatModule === 'home' && !session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             Akaun ini tidak mempunyai permission create_application. Borang New Application tidak dibuka.
           </section>
         )}
 
-        {workspace && (
+        {workspace && activeUatModule === 'home' && (
           <section className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="font-semibold">3. Direktori cawangan ({workspace.branches.length})</h2>
@@ -192,7 +208,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis hanya untuk New Application dalam Supabase UAT. Modul stok, agreement, dokumen, postage dan claim masih belum disambungkan. Jangan gunakan halaman ini untuk operasi pelanggan sebenar.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis New Application dan To Be Claimed hanya pada Supabase UAT. Modul stok, agreement dan postage masih belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
       </div>
     </main>
   );
