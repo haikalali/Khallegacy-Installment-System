@@ -3,6 +3,10 @@ import { loginWithSupabase, logoutFromSupabase, type SupabaseStaffSession } from
 import { loadSupabaseWorkspaceDirectory, type SupabaseWorkspaceDirectory } from '../lib/supabaseWorkspace';
 import { supabase } from '../lib/supabase';
 import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
+import { NewApplicationPage } from './NewApplicationPage';
+import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
+import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
+import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
 
 export function SupabaseUatPage() {
   const [identifier, setIdentifier] = useState('');
@@ -11,6 +15,9 @@ export function SupabaseUatPage() {
   const [error, setError] = useState('');
   const [session, setSession] = useState<SupabaseStaffSession | null>(null);
   const [workspace, setWorkspace] = useState<SupabaseWorkspaceDirectory | null>(null);
+  const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
+  const [applicationError, setApplicationError] = useState('');
+  const [applicationSaving, setApplicationSaving] = useState(false);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,8 +28,12 @@ export function SupabaseUatPage() {
     try {
       const signedIn = await loginWithSupabase(identifier, password);
       setSession(signedIn);
-      const directory = await loadSupabaseWorkspaceDirectory();
+      const [directory, caseIds] = await Promise.all([
+        loadSupabaseWorkspaceDirectory(),
+        loadSupabaseApplicationCaseIds(),
+      ]);
       setWorkspace(directory);
+      setApplicationCaseIds(caseIds);
       setPassword('');
     } catch (err) {
       await supabase.auth.signOut().catch(() => undefined);
@@ -31,6 +42,43 @@ export function SupabaseUatPage() {
       setError(err instanceof Error ? err.message : 'Ujian Supabase gagal.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateApplication = async (payload: NewApplicationPayload, downloadCoverPage: boolean): Promise<boolean> => {
+    setApplicationError('');
+    setApplicationSaving(true);
+    try {
+      if (!session) throw new Error('Sesi Supabase tiada. Sila log masuk semula.');
+      const localApplication = createNewApplicationTransition(
+        [],
+        payload,
+        session.user,
+        new Date().toISOString(),
+      );
+      const pdfBlob = downloadCoverPage
+        ? await buildCoverPagePdfBlob(localApplication, session.branches, [session.user])
+        : null;
+
+      await createSupabaseApplication(payload);
+      setApplicationCaseIds((previous) => [payload.caseId, ...previous]);
+
+      if (pdfBlob) {
+        const url = URL.createObjectURL(pdfBlob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${payload.caseId}-COVER-PAGE.pdf`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      return true;
+    } catch (err) {
+      setApplicationError(err instanceof Error ? err.message : 'Permohonan gagal disimpan.');
+      return false;
+    } finally {
+      setApplicationSaving(false);
     }
   };
 
@@ -57,7 +105,7 @@ export function SupabaseUatPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Khallegacy Installment System</p>
           <h1 className="mt-2 text-2xl font-bold">Supabase UAT Test</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-300">Mod ujian sambungan Supabase. Firebase kekal sebagai sistem operasi asal dan tidak disentuh oleh halaman ujian ini.</p>
-          <span className="mt-4 inline-flex rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">UAT · READ ONLY</span>
+          <span className="mt-4 inline-flex rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">UAT · CONTROLLED WRITE</span>
         </header>
 
         {!session ? (
@@ -94,6 +142,33 @@ export function SupabaseUatPage() {
 
         {session && <ManagerPermissionOverrides session={session} />}
 
+        {session && workspace && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">6. New Application · Supabase UAT</h2>
+                <p className="mt-1 text-sm text-slate-500">Simpanan terus ke Supabase UAT. Firebase Production tidak digunakan oleh borang ini.</p>
+              </div>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">WRITE ENABLED · UAT ONLY</span>
+            </div>
+            {applicationError && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{applicationError}</div>}
+            {applicationSaving && <p role="status" className="mb-3 text-sm text-blue-700">Sedang menyimpan permohonan dan menyediakan Cover Page...</p>}
+            <NewApplicationPage
+              existingCaseIds={applicationCaseIds}
+              branches={session.branches}
+              currentUser={session.user}
+              onCreateApplication={handleCreateApplication}
+              onNavigateApprovalList={() => setApplicationError('Permohonan telah disimpan. Modul Approval List belum disambungkan dalam UAT.')}
+            />
+          </section>
+        )}
+
+        {session && !session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Akaun ini tidak mempunyai permission create_application. Borang New Application tidak dibuka.
+          </section>
+        )}
+
         {workspace && (
           <section className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -116,7 +191,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: bacaan direktori dan tetapan sahaja. Permohonan, stok, agreement, dokumen, postage dan claim belum disambungkan kepada operasi tulis Supabase. Jangan gunakan halaman ini untuk operasi pelanggan sebenar.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis hanya untuk New Application dalam Supabase UAT. Modul stok, agreement, dokumen, postage dan claim masih belum disambungkan. Jangan gunakan halaman ini untuk operasi pelanggan sebenar.</footer>
       </div>
     </main>
   );
