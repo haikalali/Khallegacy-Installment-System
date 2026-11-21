@@ -22,11 +22,13 @@ export const ALL_PERMISSIONS: { key: PermissionKey; label: string; category: str
   { key: 'manage_stock', label: 'Manage Stock & Follow-up', category: 'Stock' },
 
   // Agreement Management
+  { key: 'manage_agreement', label: 'Manage Agreement Records', category: 'Agreement' },
   { key: 'receive_agreement', label: 'Agreement Receive (TERIMA)', category: 'Agreement' },
   { key: 'perform_checking', label: 'Agreement Checking & QC', category: 'Agreement' },
   { key: 'sale_submission', label: 'Sale Submission (List & PDF)', category: 'Agreement' },
   { key: 'manage_postage', label: 'Postage Management & Courier Tracking', category: 'Agreement' },
   { key: 'view_agreement_history', label: 'View Agreement History', category: 'Agreement' },
+  { key: 'dispatch_agreement', label: 'Dispatch Agreement to JCL Credit', category: 'Agreement' },
 
   // Claim Management
   { key: 'manage_to_be_claimed', label: 'To Be Claimed (JCL Receipt)', category: 'Claim' },
@@ -39,6 +41,7 @@ export const ALL_PERMISSIONS: { key: PermissionKey; label: string; category: str
   // System Administration
   { key: 'manage_users', label: 'Manage Staff Users & RBAC Matrix', category: 'System' },
   { key: 'manage_settings', label: 'Manage System Settings (Branches & Couriers)', category: 'System' },
+  { key: 'key_in_product_pricing', label: 'Key In Product Pricing', category: 'System' },
 ];
 
 export const INITIAL_BRANCHES: Branch[] = [
@@ -128,6 +131,9 @@ export const INITIAL_ROLES: RoleConfig[] = [
       'export_reports',
       'manage_users',
       'manage_settings',
+      'manage_agreement',
+      'dispatch_agreement',
+      'key_in_product_pricing',
     ],
   },
   {
