@@ -178,6 +178,10 @@ export function SupabaseUatPage() {
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
         )}
 
+        {session && activeUatModule === 'sale-submission' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('sale_submission') && (
+          <SaleSubmissionUatPage onBack={() => setActiveUatModule('home')} />
+        )}
+
         {session && activeUatModule === 'stock-management' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_stock') && (
           <StockManagementUatPage branches={session.branches} onBack={() => setActiveUatModule('home')} />
         )}
