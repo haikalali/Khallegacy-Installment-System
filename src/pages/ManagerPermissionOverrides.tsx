@@ -31,7 +31,7 @@ interface ManagerPermissionOverridesProps {
 export function ManagerPermissionOverrides({ session }: ManagerPermissionOverridesProps) {
   const canManage = session.user.roleId === 'role-management' ||
     (session.roles.find((role) => role.id === session.user.roleId)?.permissions ?? [])
-      .includes('manage_staff_permissions' as never);
+      .includes('manage_staff_permissions');
 
   const [targets, setTargets] = useState<ManagerTarget[]>([]);
   const [permissions, setPermissions] = useState<PermissionOption[]>([]);
@@ -72,7 +72,9 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
         if (targetsResult.error) throw targetsResult.error;
         if (permissionsResult.error) throw permissionsResult.error;
         if (!active) return;
-        const nextTargets = targetsResult.data ?? [];
+        const nextTargets = (targetsResult.data ?? []).filter((target) =>
+          session.user.roleId === 'role-management' || target.id !== session.user.id,
+        );
         setTargets(nextTargets);
         setPermissions(permissionsResult.data ?? []);
         const initialTarget = nextTargets[0]?.id ?? '';
