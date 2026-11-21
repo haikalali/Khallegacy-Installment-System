@@ -394,7 +394,7 @@ export function confirmJclReceiptTransition(
     taskStatus: {
       ...deriveTaskStatus(updatedApp),
       agreementSubmission: 'DELIVERED',
-      agreementClaimed: 'PENDING',
+      agreementClaimed: updatedApp.agreement.claimedDate ? 'CLAIMED' : 'PENDING',
     },
   };
 }
