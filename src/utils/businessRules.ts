@@ -777,7 +777,6 @@ export interface FinancingCalculationInput {
   processingFee: number;
   sstAmount: number;
   stampDutyOverride?: number | null;
-  cashPaymentOverride?: number | null;
   monthlyInstallmentOverride?: number | null;
   installmentDuration?: number;
 }
@@ -820,10 +819,7 @@ export function calculateFinancingSummary(
     0,
     financingAmount - processingFee - sstAmount - stampDutyFee,
   );
-  const actualCashPayment =
-    input.cashPaymentOverride !== null && input.cashPaymentOverride !== undefined
-      ? Math.max(0, Number(input.cashPaymentOverride) || 0)
-      : autoCashPayment;
+  const actualCashPayment = Number(autoCashPayment.toFixed(2));
 
   const installmentDuration = Math.max(1, Number(input.installmentDuration) || 24);
   const autoMonthlyInstallment =
@@ -913,7 +909,6 @@ export function createNewApplicationTransition(
     processingFee: payload.processingFee,
     sstAmount: payload.sstAmount,
     stampDutyOverride: payload.stampDutyFee,
-    cashPaymentOverride: payload.actualCashPayment,
     monthlyInstallmentOverride:
       payload.monthlyInstallment !== undefined ? payload.monthlyInstallment : null,
     installmentDuration: payload.installmentDuration ?? 24,
@@ -1578,7 +1573,10 @@ export function updateApplicationDetailsTransition(
   const processingFee = Math.max(0, Number(payload.processingFee) || 0);
   const sstAmount = Math.max(0, Number(payload.sstAmount) || 0);
   const stampDutyFee = Math.max(0, Number(payload.stampDutyFee) || 0);
-  const actualCashPayment = Math.max(0, Number(payload.actualCashPayment) || 0);
+  const actualCashPayment = Math.max(
+    0,
+    Number((financingAmount - processingFee - sstAmount - stampDutyFee).toFixed(2)),
+  );
   const installmentDuration = Math.max(1, Math.round(Number(payload.installmentDuration) || 24));
   const monthlyInstallment = Math.max(0, Number(payload.monthlyInstallment) || 0);
 
@@ -1874,15 +1872,14 @@ export function deleteApplicationTransition(
 }
 
 export function resolveActualCashPayment(financing: FinancingInfo): number {
-  if (financing.actualCashPayment !== undefined && financing.actualCashPayment !== null) {
-    return financing.actualCashPayment;
-  }
   return Math.max(
     0,
-    financing.financingAmount -
+    Number((
+      financing.financingAmount -
       financing.processingFee -
       financing.sstAmount -
-      financing.stampDutyFee,
+      financing.stampDutyFee
+    ).toFixed(2)),
   );
 }
 
