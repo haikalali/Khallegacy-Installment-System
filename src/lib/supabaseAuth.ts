@@ -37,6 +37,7 @@ interface SupabaseBranchRow {
   code: string;
   name: string;
   state: string;
+  branch_type: 'PHYSICAL' | 'POSTAGE' | 'WEB' | 'AGENT';
   active: boolean;
 }
 
@@ -106,7 +107,7 @@ export async function loginWithSupabase(
         .returns<Array<{ role_id: string; permission_key: string }>>(),
       supabase
         .from('branches')
-        .select('id, code, name, state, active')
+        .select('id, code, name, state, branch_type, active')
         .eq('active', true)
         .returns<SupabaseBranchRow[]>(),
       supabase
@@ -158,6 +159,7 @@ export async function loginWithSupabase(
       name: branch.name,
       state: branch.state,
       active: branch.active,
+      branchType: branch.branch_type,
     }));
 
     if (!branches.some((branch) => branch.id === staff.branch_id)) {
