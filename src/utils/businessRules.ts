@@ -417,7 +417,7 @@ export function isAgreementDelivered(
 }
 
 export function isAgreementClaimed(app: InstallmentApplication): boolean {
-  return Boolean(app.agreement.claimedDate) || app.taskStatus?.agreementClaimed === 'CLAIMED';
+  return Boolean(app.agreement.claimedDate);
 }
 
 export function resolveClaimDate(app: InstallmentApplication): string {
@@ -1006,6 +1006,9 @@ export function createNewApplicationTransition(
       jclReceivedDate: null,
       jclConfirmedBy: null,
       jclRemarks: '',
+      claimedDate: null,
+      claimedBy: null,
+      claimRemarks: '',
     },
     stockFollowUp: {
       colour: products[0]?.model || '',
