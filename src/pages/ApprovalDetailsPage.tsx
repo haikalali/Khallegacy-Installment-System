@@ -116,10 +116,6 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
   const [stampDutyManualStr, setStampDutyManualStr] = useState(
     String(application.financing.stampDutyFee),
   );
-  const [cashPaymentEdited, setCashPaymentEdited] = useState(false);
-  const [cashPaymentManualStr, setCashPaymentManualStr] = useState(
-    String(application.financing.actualCashPayment ?? 0),
-  );
   const [durationStr, setDurationStr] = useState(
     String(application.financing.installmentDuration),
   );
@@ -172,8 +168,6 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
     setSstAmountStr(String(app.financing.sstAmount));
     setStampDutyEdited(true);
     setStampDutyManualStr(String(app.financing.stampDutyFee));
-    setCashPaymentEdited(app.financing.actualCashPayment !== undefined);
-    setCashPaymentManualStr(String(app.financing.actualCashPayment ?? 0));
     setDurationStr(String(app.financing.installmentDuration));
     setMonthlyEdited(true);
     setMonthlyManualStr(String(app.financing.monthlyInstallment));
@@ -217,7 +211,6 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
       processingFee: Number(processingFeeStr) || 0,
       sstAmount: Number(sstAmountStr) || 0,
       stampDutyOverride: stampDutyEdited ? Number(stampDutyManualStr) || 0 : null,
-      cashPaymentOverride: cashPaymentEdited ? Number(cashPaymentManualStr) || 0 : null,
       installmentDuration: duration,
     });
     return {
@@ -234,8 +227,6 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
     sstAmountStr,
     stampDutyEdited,
     stampDutyManualStr,
-    cashPaymentEdited,
-    cashPaymentManualStr,
     durationStr,
     monthlyEdited,
     monthlyManualStr,
@@ -254,15 +245,15 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
     users.find((u) => u.id === application.staffInChargeId)?.name ??
     application.timeline[application.timeline.length - 1]?.staffName ??
     '—';
-  const actualCashPayment =
-    application.financing.actualCashPayment ??
-    Math.max(
-      0,
+  const actualCashPayment = Math.max(
+    0,
+    Number((
       application.financing.financingAmount -
-        application.financing.processingFee -
-        application.financing.sstAmount -
-        application.financing.stampDutyFee,
-    );
+      application.financing.processingFee -
+      application.financing.sstAmount -
+      application.financing.stampDutyFee
+    ).toFixed(2)),
+  );
 
   const handleStartEdit = () => {
     syncFormFromApplication(application);
@@ -1153,37 +1144,19 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                 />
               </div>
 
-              <div className="p-3 bg-white rounded-lg border border-slate-200">
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="edit-actual-cash" className="text-slate-500">
-                    Actual Cash (RM)
-                  </label>
-                  {cashPaymentEdited && (
-                    <button
-                      type="button"
-                      onClick={() => setCashPaymentEdited(false)}
-                      className="text-[10.5px] text-blue-600 hover:underline"
-                    >
-                      Auto
-                    </button>
-                  )}
-                </div>
+              <div className="p-3 bg-emerald-50/70 rounded-lg border border-emerald-200/80">
+                <label htmlFor="edit-actual-cash" className="block text-emerald-700 mb-1">
+                  Actual Cash Payment (RM)
+                </label>
                 <input
                   id="edit-actual-cash"
                   type="number"
-                  min={0}
-                  step="0.01"
-                  value={
-                    cashPaymentEdited
-                      ? cashPaymentManualStr
-                      : liveFinancing.actualCashPayment.toFixed(2)
-                  }
-                  onChange={(e) => {
-                    setCashPaymentEdited(true);
-                    setCashPaymentManualStr(e.target.value);
-                  }}
-                  className="w-full px-2 py-1 text-xs font-mono-tabular border border-slate-200 rounded bg-white text-slate-900 focus:outline-none focus:border-blue-500"
+                  value={liveFinancing.actualCashPayment.toFixed(2)}
+                  readOnly
+                  aria-readonly="true"
+                  className="w-full px-2 py-1 text-xs font-mono-tabular font-semibold border border-emerald-200 rounded bg-emerald-50 text-emerald-900"
                 />
+                <p className="mt-1 text-[10px] text-emerald-700">Auto formula; tidak boleh diedit manual.</p>
               </div>
 
               <div className="p-3 bg-emerald-50/70 rounded-lg border border-emerald-200/80">
