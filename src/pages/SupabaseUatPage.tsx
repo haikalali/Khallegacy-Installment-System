@@ -162,10 +162,10 @@ export function SupabaseUatPage() {
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
         )}
 
-        {session && activeUatModule === 'postage' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_postage') && (
+        {session && workspace && activeUatModule === 'postage' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_postage') && (
           <PostageTrackingUatPage
             currentUser={session.user}
-            couriers={session.couriers}
+            couriers={workspace.couriers}
             onBack={() => setActiveUatModule('home')}
           />
         )}
