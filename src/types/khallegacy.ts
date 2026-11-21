@@ -33,7 +33,8 @@ export type PermissionKey =
   | 'view_reports'
   | 'export_reports'
   | 'manage_users'
-  | 'manage_settings';
+  | 'manage_settings'
+  | 'key_in_product_pricing';
 
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
 export type StockStatus = 'OK' | 'Pending Stock' | 'Out of Stock';
