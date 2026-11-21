@@ -103,8 +103,9 @@ import {
 } from './lib/firestoreSync';
 import { LoginPage } from './pages/LoginPage';
 import { ErrorState } from './components/StateViews';
+import { SupabaseUatPage } from './pages/SupabaseUatPage';
 
-export default function App() {
+function FirebaseApp() {
   const [applications, setApplications] = useState<InstallmentApplication[]>(INITIAL_APPLICATIONS);
   const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES);
   const [couriers, setCouriers] = useState<Courier[]>(INITIAL_COURIERS);
@@ -1466,4 +1467,17 @@ export default function App() {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
+}
+
+
+/**
+ * UAT mode is opt-in through VITE_APP_MODE=supabase-uat.
+ * The default application remains on the existing Firebase workflow until
+ * Supabase operational repositories have passed acceptance testing.
+ */
+export default function App() {
+  if (import.meta.env.VITE_APP_MODE === 'supabase-uat') {
+    return <SupabaseUatPage />;
+  }
+  return <FirebaseApp />;
 }
