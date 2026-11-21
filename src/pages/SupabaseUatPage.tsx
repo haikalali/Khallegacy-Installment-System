@@ -159,6 +159,7 @@ export function SupabaseUatPage() {
               currentUser={session.user}
               onCreateApplication={handleCreateApplication}
               onNavigateApprovalList={() => setApplicationError('Permohonan telah disimpan. Modul Approval List belum disambungkan dalam UAT.')}
+              isSaving={applicationSaving}
             />
           </section>
         )}
