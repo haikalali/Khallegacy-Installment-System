@@ -33,6 +33,7 @@ export type PermissionKey =
   | 'view_reports'
   | 'export_reports'
   | 'manage_users'
+  | 'manage_staff_permissions'
   | 'manage_settings'
   | 'key_in_product_pricing';
 
