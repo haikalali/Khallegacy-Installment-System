@@ -490,11 +490,13 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                   >
                     <option value="">Pilih cawangan asal</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
+                    {branches
+                      .filter((b) => b.code !== 'POS' && b.name.toUpperCase() !== 'POSTAGE')
+                      .map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
                     {!branches.some((b) => b.code === 'WEB' || b.id === 'WEB') && (
                       <option value="WEB">WEB</option>
                     )}
@@ -515,11 +517,13 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                   >
                     <option value="">Belum Ditentukan</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
+                    {branches
+                      .filter((b) => b.code !== 'WEB' && b.name.toUpperCase() !== 'WEBSITE' && b.name.toUpperCase() !== 'WEB')
+                      .map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
                     {!branches.some(
                       (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
                     ) && <option value="POSTAGE">POSTAGE</option>}
