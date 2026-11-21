@@ -235,7 +235,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis New Application dan To Be Claimed hanya pada Supabase UAT. Modul stok dan agreement masih belum disambungkan. Postage & Tracking disambungkan secara UAT. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: New Application, Agreement Management (dispatch dan pengesahan penerimaan JCL), To Be Claimed, Sale Submission dan Postage & Tracking disambungkan pada Supabase UAT. Modul stok belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
       </div>
     </main>
   );
