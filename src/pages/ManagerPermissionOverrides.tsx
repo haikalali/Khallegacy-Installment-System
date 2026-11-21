@@ -77,9 +77,8 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
           ? targetsResult.data as unknown as ManagerTarget[]
           : [];
         const nextTargets = rawTargets.filter((target: ManagerTarget) =>
-          session.user.roleId === 'role-management'
-            ? target.role_id === 'role-manager'
-            : target.id !== session.user.id,
+          target.role_id === 'role-manager' &&
+          (session.user.roleId === 'role-management' || target.id !== session.user.id),
         );
         setTargets(nextTargets);
         setPermissions(permissionsResult.data ?? []);
@@ -98,18 +97,12 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
   }, [canManage, loadOverrides]);
 
   const selectedTarget = targets.find((target) => target.id === selectedStaffId);
-  const visiblePermissions = selectedTarget?.role_id === 'role-sales-admin'
-    ? permissions.filter((permission) => permission.permission_key === 'key_in_product_pricing')
-    : permissions;
+  const visiblePermissions = permissions;
 
   const changeTarget = async (staffId: string) => {
     setSelectedStaffId(staffId);
     const target = targets.find((item) => item.id === staffId);
-    if (target?.role_id === 'role-sales-admin') {
-      setSelectedPermission('key_in_product_pricing');
-    } else {
-      setSelectedPermission('');
-    }
+    setSelectedPermission('');
     setError('');
     setNotice('');
     try {
