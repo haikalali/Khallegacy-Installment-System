@@ -177,8 +177,6 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     setSstAmountStr('4.00');
     setStampDutyEdited(false);
     setStampDutyManualStr('0.00');
-    setCashPaymentEdited(false);
-    setCashPaymentManualStr('0.00');
     setInstallmentDuration(24);
     setMonthlyInstallmentEdited(false);
     setMonthlyInstallmentManualStr('0.00');
