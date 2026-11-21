@@ -3,7 +3,6 @@ import { loginWithSupabase, logoutFromSupabase, type SupabaseStaffSession } from
 import { loadSupabaseWorkspaceDirectory, type SupabaseWorkspaceDirectory } from '../lib/supabaseWorkspace';
 import { supabase } from '../lib/supabase';
 import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
-import { ProductPricingPage } from './ProductPricingPage';
 import { NewApplicationPage } from './NewApplicationPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
@@ -142,7 +141,6 @@ export function SupabaseUatPage() {
         )}
 
         {session && <ManagerPermissionOverrides session={session} />}
-        {session && <ProductPricingPage session={session} />}
 
         {session && workspace && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
