@@ -72,7 +72,10 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
         if (targetsResult.error) throw targetsResult.error;
         if (permissionsResult.error) throw permissionsResult.error;
         if (!active) return;
-        const nextTargets = (targetsResult.data ?? []).filter((target) =>
+        const rawTargets: ManagerTarget[] = Array.isArray(targetsResult.data)
+          ? targetsResult.data as unknown as ManagerTarget[]
+          : [];
+        const nextTargets = rawTargets.filter((target: ManagerTarget) =>
           session.user.roleId === 'role-management' || target.id !== session.user.id,
         );
         setTargets(nextTargets);
