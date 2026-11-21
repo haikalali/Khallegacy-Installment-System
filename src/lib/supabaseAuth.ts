@@ -130,11 +130,8 @@ export async function loginWithSupabase(
 
     const roles: RoleConfig[] = (rolesResult.data ?? []).map((role) => {
       const effectivePermissions = new Set(permissionsByRole.get(role.id) ?? []);
-      if (role.id === staff.role_id && (staff.role_id === 'role-manager' || staff.role_id === 'role-sales-admin')) {
+      if (role.id === staff.role_id && staff.role_id === 'role-manager') {
         for (const override of overridesResult.data ?? []) {
-          if (staff.role_id === 'role-sales-admin' && override.permission_key !== 'key_in_product_pricing') {
-            continue;
-          }
           if (override.effect === 'ALLOW') {
             effectivePermissions.add(override.permission_key as PermissionKey);
           } else if (override.effect === 'DENY') {
