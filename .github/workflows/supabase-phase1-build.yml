@@ -1,9 +1,9 @@
-name: Supabase Phase 1 Build Check
+name: Supabase Auth Foundation Build Check
 
 on:
   push:
     branches:
-      - feature/supabase-client-phase-1
+      - feature/supabase-auth-foundation
   workflow_dispatch:
 
 permissions:
