@@ -35,6 +35,15 @@ const STATUS_OPTIONS: PostageTrackingStatus[] = [
   'FAILED / RETURNED',
 ];
 
+function createTrackingId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
+    return `POST-${cryptoApi.randomUUID()}`;
+  }
+  // randomUUID is unavailable on some local HTTP origins (for example, LAN IPs).
+  return `POST-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+}
+
 function todayLocal(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -128,7 +137,7 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
       ? `Sale Submission ${selectedSubmission.submission_list_id} (${selectedSubmission.agreement_count} agreements)`
       : '');
     const { error: insertError } = await supabase.from('postage_trackings').insert({
-      id: `POST-${crypto.randomUUID()}`,
+      id: createTrackingId(),
       tracking_date: date,
       description: finalDescription,
       sale_submission_id: submissionId,
