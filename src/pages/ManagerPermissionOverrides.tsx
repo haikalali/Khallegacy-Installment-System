@@ -8,6 +8,7 @@ interface ManagerTarget {
   name: string;
   username: string;
   status: string;
+  role_id: string;
 }
 
 interface PermissionOption {
@@ -66,7 +67,7 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
       setError('');
       try {
         const [targetsResult, permissionsResult] = await Promise.all([
-          supabase.rpc('list_manager_permission_targets').returns<ManagerTarget[]>(),
+          supabase.rpc('list_permission_override_targets').returns<ManagerTarget[]>(),
           supabase.from('permissions').select('permission_key, description').order('permission_key').returns<PermissionOption[]>(),
         ]);
         if (targetsResult.error) throw targetsResult.error;
@@ -76,7 +77,9 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
           ? targetsResult.data as unknown as ManagerTarget[]
           : [];
         const nextTargets = rawTargets.filter((target: ManagerTarget) =>
-          session.user.roleId === 'role-management' || target.id !== session.user.id,
+          session.user.roleId === 'role-management'
+            ? target.role_id === 'role-manager'
+            : target.id !== session.user.id,
         );
         setTargets(nextTargets);
         setPermissions(permissionsResult.data ?? []);
@@ -94,8 +97,19 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
     return () => { active = false; };
   }, [canManage, loadOverrides]);
 
+  const selectedTarget = targets.find((target) => target.id === selectedStaffId);
+  const visiblePermissions = selectedTarget?.role_id === 'role-sales-admin'
+    ? permissions.filter((permission) => permission.permission_key === 'key_in_product_pricing')
+    : permissions;
+
   const changeTarget = async (staffId: string) => {
     setSelectedStaffId(staffId);
+    const target = targets.find((item) => item.id === staffId);
+    if (target?.role_id === 'role-sales-admin') {
+      setSelectedPermission('key_in_product_pricing');
+    } else {
+      setSelectedPermission('');
+    }
     setError('');
     setNotice('');
     try {
@@ -181,7 +195,7 @@ export function ManagerPermissionOverrides({ session }: ManagerPermissionOverrid
             <label className="text-sm font-medium text-slate-700">Permission
               <select value={selectedPermission} onChange={(event) => setSelectedPermission(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
                 <option value="">Pilih permission</option>
-                {permissions.map((permission) => <option key={permission.permission_key} value={permission.permission_key}>{permission.description || permission.permission_key}</option>)}
+                {visiblePermissions.map((permission) => <option key={permission.permission_key} value={permission.permission_key}>{permission.description || permission.permission_key}</option>)}
               </select>
             </label>
             <label className="text-sm font-medium text-slate-700">Tindakan
