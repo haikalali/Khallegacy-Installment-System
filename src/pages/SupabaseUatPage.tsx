@@ -7,7 +7,8 @@ import { NewApplicationPage } from './NewApplicationPage';
 import { ToBeClaimedUatPage } from './ToBeClaimedUatPage';
 import { PostageTrackingUatPage } from './PostageTrackingUatPage';
 import { SaleSubmissionUatPage } from './SaleSubmissionUatPage';
-import { AgreementManagementUatPage } from './AgreementManagementUatPage';
+import { AgreementReceiveUatPage } from './AgreementReceiveUatPage';
+import { AgreementCheckingUatPage } from './AgreementCheckingUatPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
 import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
@@ -22,7 +23,7 @@ export function SupabaseUatPage() {
   const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
   const [applicationError, setApplicationError] = useState('');
   const [applicationSaving, setApplicationSaving] = useState(false);
-  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage' | 'sale-submission' | 'agreement-management'>('home');
+  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage' | 'sale-submission' | 'agreement-receive' | 'agreement-checking'>('home');
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -154,8 +155,11 @@ export function SupabaseUatPage() {
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('sale_submission') && (
                 <button type="button" onClick={() => setActiveUatModule('sale-submission')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'sale-submission' ? 'bg-violet-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Sale Submission</button>
               )}
-              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('dispatch_agreement') && (
-                <button type="button" onClick={() => setActiveUatModule('agreement-management')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'agreement-management' ? 'bg-amber-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Agreement Management</button>
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('receive_agreement') && (
+                <button type="button" onClick={() => setActiveUatModule('agreement-receive')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'agreement-receive' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Agreement Receive</button>
+              )}
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_agreement') && (
+                <button type="button" onClick={() => setActiveUatModule('agreement-checking')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'agreement-checking' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Agreement Checking</button>
               )}
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_postage') && (
                 <button type="button" onClick={() => setActiveUatModule('postage')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'postage' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Postage &amp; Tracking</button>
@@ -170,11 +174,12 @@ export function SupabaseUatPage() {
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
         )}
 
-        {session && workspace && activeUatModule === 'agreement-management' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('dispatch_agreement') && (
-          <AgreementManagementUatPage
-            couriers={workspace.couriers}
-            onBack={() => setActiveUatModule('home')}
-          />
+        {session && activeUatModule === 'agreement-receive' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('receive_agreement') && (
+          <AgreementReceiveUatPage onBack={() => setActiveUatModule('home')} />
+        )}
+
+        {session && activeUatModule === 'agreement-checking' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_agreement') && (
+          <AgreementCheckingUatPage onBack={() => setActiveUatModule('home')} />
         )}
 
         {session && workspace && activeUatModule === 'postage' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_postage') && (
@@ -235,7 +240,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: New Application, Agreement Management (dispatch dan pengesahan penerimaan JCL), To Be Claimed, Sale Submission dan Postage & Tracking disambungkan pada Supabase UAT. Modul stok belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: New Application, Agreement Receive, Agreement Checking, To Be Claimed, Sale Submission dan Postage & Tracking disambungkan pada Supabase UAT. Modul stok belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
       </div>
     </main>
   );
