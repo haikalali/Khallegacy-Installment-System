@@ -393,7 +393,8 @@ export function confirmJclReceiptTransition(
     ...updatedApp,
     taskStatus: {
       ...deriveTaskStatus(updatedApp),
-      agreementClaimed: 'CLAIMED',
+      agreementSubmission: 'DELIVERED',
+      agreementClaimed: 'PENDING',
     },
   };
 }
@@ -416,14 +417,12 @@ export function isAgreementDelivered(
 }
 
 export function isAgreementClaimed(app: InstallmentApplication): boolean {
-  return (
-    app.agreement.jclReceiptStatus === 'Received by JCL' ||
-    app.taskStatus?.agreementClaimed === 'CLAIMED'
-  );
+  return Boolean(app.agreement.claimedDate) || app.taskStatus?.agreementClaimed === 'CLAIMED';
 }
 
 export function resolveClaimDate(app: InstallmentApplication): string {
   return (
+    app.agreement.claimedDate ||
     app.agreement.jclReceivedDate ||
     app.agreement.saleSubmittedAt?.slice(0, 10) ||
     app.approvalDate ||
@@ -476,10 +475,9 @@ export function claimAgreementTransition(
     ...app,
     agreement: {
       ...app.agreement,
-      jclReceiptStatus: 'Received by JCL',
-      jclReceivedDate: payload.claimDate,
-      jclConfirmedBy: payload.claimedBy.trim(),
-      jclRemarks: payload.remarks.trim(),
+      claimedDate: payload.claimDate,
+      claimedBy: payload.claimedBy.trim(),
+      claimRemarks: payload.remarks.trim(),
     },
     timeline: [event, ...app.timeline],
   };
@@ -1102,12 +1100,11 @@ export function deriveTaskStatus(
         ? 'DELIVERED'
         : 'IN TRANSIT'
       : 'PENDING';
-  const derivedClaimed: TaskAgreementClaimedStatus =
-    app.agreement.jclReceiptStatus === 'Received by JCL'
-      ? 'CLAIMED'
-      : app.agreement.jclReceiptStatus === 'Pending JCL Confirmation'
-        ? 'PENDING JCL'
-        : 'PENDING';
+  const derivedClaimed: TaskAgreementClaimedStatus = app.agreement.claimedDate
+    ? 'CLAIMED'
+    : app.agreement.jclReceiptStatus === 'Pending JCL Confirmation'
+      ? 'PENDING JCL'
+      : 'PENDING';
 
   const resolvedSubmission = linkedPostage
     ? app.taskStatus?.agreementSubmission &&
@@ -1127,7 +1124,7 @@ export function deriveTaskStatus(
     agreementReceived: app.taskStatus?.agreementReceived ?? derivedReceived,
     agreementChecking: app.taskStatus?.agreementChecking ?? derivedChecking,
     agreementSubmission: resolvedSubmission,
-    agreementClaimed: app.taskStatus?.agreementClaimed ?? derivedClaimed,
+    agreementClaimed: app.agreement.claimedDate ? 'CLAIMED' : derivedClaimed,
   };
 }
 
@@ -1427,8 +1424,11 @@ export function getApprovalListClaimStatus(
   if (app.approvalStatus === 'Rejected') return '—';
   const followUp = deriveStockFollowUp(app);
   if (followUp.customerDecision === 'CANCELLED') return '—';
-  if (app.agreement.jclReceiptStatus === 'Received by JCL') return 'Claimed';
-  if (app.agreement.dispatchStatus === 'Dispatched') return 'Pending JCL';
+  if (isAgreementClaimed(app)) return 'Claimed';
+  if (
+    app.agreement.dispatchStatus === 'Dispatched' &&
+    app.agreement.jclReceiptStatus !== 'Received by JCL'
+  ) return 'Pending JCL';
   if (
     app.agreement.checkingStatus === 'Checking Passed' ||
     app.agreement.dispatchStatus === 'Ready to Dispatch'
