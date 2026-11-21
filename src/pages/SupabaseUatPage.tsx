@@ -6,6 +6,7 @@ import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
 import { NewApplicationPage } from './NewApplicationPage';
 import { ToBeClaimedUatPage } from './ToBeClaimedUatPage';
 import { PostageTrackingUatPage } from './PostageTrackingUatPage';
+import { SaleSubmissionUatPage } from './SaleSubmissionUatPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
 import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
@@ -20,7 +21,7 @@ export function SupabaseUatPage() {
   const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
   const [applicationError, setApplicationError] = useState('');
   const [applicationSaving, setApplicationSaving] = useState(false);
-  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage'>('home');
+  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage' | 'sale-submission'>('home');
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -148,6 +149,9 @@ export function SupabaseUatPage() {
               )}
               {(session.roles.find((r) => r.id === session.user.roleId)?.permissions.some((permission) => permission === 'manage_to_be_claimed' || permission === 'manage_agreement')) && (
                 <button type="button" onClick={() => setActiveUatModule('to-be-claimed')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'to-be-claimed' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>To Be Claimed</button>
+              )}
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('sale_submission') && (
+                <button type="button" onClick={() => setActiveUatModule('sale-submission')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'sale-submission' ? 'bg-violet-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Sale Submission</button>
               )}
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_postage') && (
                 <button type="button" onClick={() => setActiveUatModule('postage')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'postage' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Postage &amp; Tracking</button>
