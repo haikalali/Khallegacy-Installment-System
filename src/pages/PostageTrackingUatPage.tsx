@@ -122,6 +122,8 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
     setError('');
     setNotice('');
     const selectedSubmission = submissions.find((item) => item.submission_list_id === submissionId);
+    if (!selectedSubmission) { setError('Sila pilih Batch Submission List.'); setSaving(false); return; }
+    if (status === 'DELIVERED') { setError('Batch mesti diwujudkan dahulu dan hanya boleh ditandakan DELIVERED melalui Update Status.'); setSaving(false); return; }
     const finalDescription = description.trim() || (selectedSubmission
       ? `Sale Submission ${selectedSubmission.submission_list_id} (${selectedSubmission.agreement_count} agreements)`
       : '');
@@ -129,7 +131,7 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
       id: `POST-${crypto.randomUUID()}`,
       tracking_date: date,
       description: finalDescription,
-      sale_submission_id: submissionId || null,
+      sale_submission_id: submissionId,
       tracking_number: trackingNumber.trim().toUpperCase(),
       courier,
       status,
@@ -213,9 +215,9 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
           <label className="text-sm font-medium">Tarikh
             <input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
           </label>
-          <label className="text-sm font-medium">Sale Submission (optional)
+          <label className="text-sm font-medium">Batch Submission List (wajib)
             <select value={submissionId} onChange={(event) => setSubmissionId(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-              <option value="">Tidak dipautkan</option>
+              <option value="">Pilih Batch Submission List</option>
               {availableSubmissions.map((item) => <option key={item.submission_list_id} value={item.submission_list_id}>{item.submission_list_id} · {item.agreement_count} agreement · {formatDate(item.submission_date)}</option>)}
             </select>
           </label>
@@ -230,7 +232,7 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
           </label>
           <label className="text-sm font-medium">Status awal
             <select value={status} onChange={(event) => setStatus(event.target.value as PostageTrackingStatus)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-              {STATUS_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              {STATUS_OPTIONS.filter((item) => item !== 'DELIVERED').map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="text-sm font-medium">Description
@@ -241,9 +243,9 @@ export function PostageTrackingUatPage({ currentUser, couriers, onBack }: Postag
           <textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
         </label>
         <div className="flex justify-end">
-          <button type="submit" disabled={saving || !date || !trackingNumber.trim() || !courier} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan Tracking'}</button>
+          <button type="submit" disabled={saving || !date || !submissionId || !trackingNumber.trim() || !courier} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan Tracking'}</button>
         </div>
-        <p className="text-xs text-slate-500">Untuk melayakkan agreement masuk ke To Be Claimed, tracking mesti dipautkan kepada Sale Submission yang mengandungi agreement berkaitan dan statusnya DELIVERED.</p>
+        <p className="text-xs text-slate-500">Setiap Batch Submission List mesti dipautkan kepada rekod postage. Apabila status dikemas kini kepada DELIVERED, semua pelanggan dalam batch akan masuk ke To Be Claimed secara automatik.</p>
       </form>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
