@@ -33,6 +33,12 @@ interface NewApplicationPageProps {
   isSaving?: boolean;
 }
 
+const getLocalDateInputValue = (): string => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
+};
+
 const createInitialProductRow = (): ProductDraft => ({
   id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   productName: '',
@@ -56,7 +62,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
   const [ref1Id, setRef1Id] = useState('');
   const [customerFromBranchId, setCustomerFromBranchId] = useState('');
   const [pickupBranchId, setPickupBranchId] = useState('');
-  const [applicationDate, setApplicationDate] = useState('2026-11-17');
+  const [applicationDate, setApplicationDate] = useState<string>(getLocalDateInputValue);
   const [bankName, setBankName] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [applicationRemarks, setApplicationRemarks] = useState('');
@@ -164,7 +170,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     setRef1Id('');
     setCustomerFromBranchId('');
     setPickupBranchId('');
-    setApplicationDate('2026-11-17');
+    setApplicationDate(getLocalDateInputValue());
     setBankName('');
     setBankAccountNumber('');
     setApplicationRemarks('');
