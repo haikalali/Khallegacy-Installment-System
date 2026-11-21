@@ -216,6 +216,9 @@ export interface AgreementState {
   jclReceivedDate: string | null;
   jclConfirmedBy: string | null;
   jclRemarks: string;
+  claimedDate?: string | null;
+  claimedBy?: string | null;
+  claimRemarks?: string;
 }
 
 export interface ActivityEvent {
