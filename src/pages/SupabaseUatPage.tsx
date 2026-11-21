@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { loginWithSupabase, logoutFromSupabase, type SupabaseStaffSession } from '../lib/supabaseAuth';
 import { loadSupabaseWorkspaceDirectory, type SupabaseWorkspaceDirectory } from '../lib/supabaseWorkspace';
 import { supabase } from '../lib/supabase';
+import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
 
 export function SupabaseUatPage() {
   const [identifier, setIdentifier] = useState('');
@@ -90,6 +91,8 @@ export function SupabaseUatPage() {
             <div className="mt-2 flex flex-wrap gap-2">{(session.roles.find((r) => r.id === session.user.roleId)?.permissions ?? []).map((permission) => <span key={permission} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">{permission}</span>)}</div>
           </section>
         )}
+
+        {session && <ManagerPermissionOverrides session={session} />}
 
         {workspace && (
           <section className="grid gap-4 md:grid-cols-2">
