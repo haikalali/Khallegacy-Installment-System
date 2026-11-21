@@ -28,7 +28,7 @@ interface NewApplicationPageProps {
   existingCaseIds: string[];
   branches: Branch[];
   currentUser: StaffUser;
-  onCreateApplication: (payload: NewApplicationPayload, downloadCoverPage: boolean) => boolean;
+  onCreateApplication: (payload: NewApplicationPayload, downloadCoverPage: boolean) => boolean | Promise<boolean>;
   onNavigateApprovalList: () => void;
 }
 
@@ -184,7 +184,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
     setProductRowWarning(null);
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError(null);
 
@@ -244,7 +244,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
       installmentDuration: financingCalc.installmentDuration,
     };
 
-    const ok = onCreateApplication(payload, true);
+    const ok = await onCreateApplication(payload, true);
     if (ok) {
       setLastSavedCaseId(payload.caseId);
       handleResetForm();
