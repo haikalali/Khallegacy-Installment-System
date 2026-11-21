@@ -565,11 +565,17 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                     onChange={(e) => setFromBranchInput(e.target.value)}
                     className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500"
                   >
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
+                    {branches
+                      .filter(
+                        (b) =>
+                          (b.code !== 'POS' && b.name.toUpperCase() !== 'POSTAGE') ||
+                          fromBranchInput === b.id,
+                      )
+                      .map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
                     {(fromBranchInput === 'WEB' ||
                       !branches.some((b) => b.code === 'WEB' || b.id === 'WEB')) && (
                       <option value="WEB">WEB</option>
@@ -588,11 +594,19 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                     className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Belum Ditentukan</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
+                    {branches
+                      .filter(
+                        (b) =>
+                          (b.code !== 'WEB' &&
+                            b.name.toUpperCase() !== 'WEBSITE' &&
+                            b.name.toUpperCase() !== 'WEB') ||
+                          pickupBranchInput === b.id,
+                      )
+                      .map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
                     {(pickupBranchInput === 'POSTAGE' ||
                       !branches.some(
                         (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
