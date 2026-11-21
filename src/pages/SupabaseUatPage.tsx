@@ -166,7 +166,7 @@ export function SupabaseUatPage() {
                 <button type="button" onClick={() => setActiveUatModule('agreement-checking')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'agreement-checking' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Agreement Checking</button>
               )}
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_postage') && (
-                <button type="button" onClick={() => setActiveUatModule('postage')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'postage' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Postage &amp; Tracking</button>
+                <button type="button" onClick={() => setActiveUatModule('postage')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'postage' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Postage Management</button>
               )}
             </div>
           </section>
@@ -245,14 +245,14 @@ export function SupabaseUatPage() {
               <dl className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div><dt className="text-xs text-slate-500">Nama sistem</dt><dd className="text-sm font-medium">{workspace.systemPrefs.systemName}</dd></div>
                 <div><dt className="text-xs text-slate-500">Syarikat</dt><dd className="text-sm font-medium">{workspace.systemPrefs.companyName}</dd></div>
-                <div><dt className="text-xs text-slate-500">Destinasi agreement</dt><dd className="text-sm font-medium">{workspace.systemPrefs.fixedDispatchDestination}</dd></div>
+                <div><dt className="text-xs text-slate-500">Destinasi batch postage</dt><dd className="text-sm font-medium">{workspace.systemPrefs.fixedDispatchDestination}</dd></div>
               </dl>
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 md:col-span-2">LULUS: Login Supabase, pemetaan staf/role/permission dan bacaan direktori serta tetapan berjaya.</div>
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: New Application, Agreement Receive, Agreement Checking, To Be Claimed, Sale Submission dan Postage & Tracking disambungkan pada Supabase UAT. Modul stok belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Workflow UAT: Stock Management → Agreement Receive → Agreement Checking → Sale Submission Batch → Postage Management → DELIVERED → To Be Claimed → CLAIMED. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
       </div>
     </main>
   );
