@@ -9,6 +9,7 @@ import { PostageTrackingUatPage } from './PostageTrackingUatPage';
 import { SaleSubmissionUatPage } from './SaleSubmissionUatPage';
 import { AgreementReceiveUatPage } from './AgreementReceiveUatPage';
 import { AgreementCheckingUatPage } from './AgreementCheckingUatPage';
+import { StockManagementUatPage } from './StockManagementUatPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
 import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
@@ -23,7 +24,7 @@ export function SupabaseUatPage() {
   const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
   const [applicationError, setApplicationError] = useState('');
   const [applicationSaving, setApplicationSaving] = useState(false);
-  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage' | 'sale-submission' | 'agreement-receive' | 'agreement-checking'>('home');
+  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage' | 'sale-submission' | 'agreement-receive' | 'agreement-checking' | 'stock-management'>('home');
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,6 +156,9 @@ export function SupabaseUatPage() {
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('sale_submission') && (
                 <button type="button" onClick={() => setActiveUatModule('sale-submission')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'sale-submission' ? 'bg-violet-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Sale Submission</button>
               )}
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_stock') && (
+                <button type="button" onClick={() => setActiveUatModule('stock-management')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'stock-management' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Stock Management</button>
+              )}
               {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('receive_agreement') && (
                 <button type="button" onClick={() => setActiveUatModule('agreement-receive')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'agreement-receive' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Agreement Receive</button>
               )}
@@ -172,6 +176,10 @@ export function SupabaseUatPage() {
 
         {session && activeUatModule === 'to-be-claimed' && (
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
+        )}
+
+        {session && activeUatModule === 'stock-management' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_stock') && (
+          <StockManagementUatPage branches={session.branches} onBack={() => setActiveUatModule('home')} />
         )}
 
         {session && activeUatModule === 'agreement-receive' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('receive_agreement') && (
