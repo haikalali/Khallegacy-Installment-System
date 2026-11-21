@@ -152,7 +152,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        {session && <ManagerPermissionOverrides session={session} />}
+        {session && activeUatModule === 'home' && <ManagerPermissionOverrides session={session} />}
 
         {session && activeUatModule === 'to-be-claimed' && (
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
