@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { ManagerPermissionOverrides } from './ManagerPermissionOverrides';
 import { NewApplicationPage } from './NewApplicationPage';
 import { ToBeClaimedUatPage } from './ToBeClaimedUatPage';
+import { PostageTrackingUatPage } from './PostageTrackingUatPage';
 import { createSupabaseApplication, loadSupabaseApplicationCaseIds } from '../lib/supabaseApplications';
 import { createNewApplicationTransition, type NewApplicationPayload } from '../utils/businessRules';
 import { buildCoverPagePdfBlob } from '../utils/coverPagePdf';
@@ -19,7 +20,7 @@ export function SupabaseUatPage() {
   const [applicationCaseIds, setApplicationCaseIds] = useState<string[]>([]);
   const [applicationError, setApplicationError] = useState('');
   const [applicationSaving, setApplicationSaving] = useState(false);
-  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed'>('home');
+  const [activeUatModule, setActiveUatModule] = useState<'home' | 'to-be-claimed' | 'postage'>('home');
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -148,6 +149,9 @@ export function SupabaseUatPage() {
               {(session.roles.find((r) => r.id === session.user.roleId)?.permissions.some((permission) => permission === 'manage_to_be_claimed' || permission === 'manage_agreement')) && (
                 <button type="button" onClick={() => setActiveUatModule('to-be-claimed')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'to-be-claimed' ? 'bg-emerald-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>To Be Claimed</button>
               )}
+              {session.roles.find((r) => r.id === session.user.roleId)?.permissions.includes('manage_postage') && (
+                <button type="button" onClick={() => setActiveUatModule('postage')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeUatModule === 'postage' ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}>Postage &amp; Tracking</button>
+              )}
             </div>
           </section>
         )}
@@ -156,6 +160,14 @@ export function SupabaseUatPage() {
 
         {session && activeUatModule === 'to-be-claimed' && (
           <ToBeClaimedUatPage onBack={() => setActiveUatModule('home')} />
+        )}
+
+        {session && activeUatModule === 'postage' && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('manage_postage') && (
+          <PostageTrackingUatPage
+            currentUser={session.user}
+            couriers={session.couriers}
+            onBack={() => setActiveUatModule('home')}
+          />
         )}
 
         {session && activeUatModule === 'home' && workspace && session.roles.find((role) => role.id === session.user.roleId)?.permissions.includes('create_application') && (
@@ -208,7 +220,7 @@ export function SupabaseUatPage() {
           </section>
         )}
 
-        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis New Application dan To Be Claimed hanya pada Supabase UAT. Modul stok, agreement dan postage masih belum disambungkan. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
+        <footer className="text-xs leading-5 text-slate-500">Had ujian versi ini: operasi tulis New Application dan To Be Claimed hanya pada Supabase UAT. Modul stok dan agreement masih belum disambungkan. Postage & Tracking disambungkan secara UAT. Firebase Production tidak digunakan oleh halaman ujian ini.</footer>
       </div>
     </main>
   );
