@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { loginWithSupabase, logoutFromSupabase, type SupabaseStaffSession } from '../lib/supabaseAuth';
 import { loadSupabaseWorkspaceDirectory, type SupabaseWorkspaceDirectory } from '../lib/supabaseWorkspace';
 import { supabase } from '../lib/supabase';
@@ -11,7 +11,7 @@ export function SupabaseUatPage() {
   const [session, setSession] = useState<SupabaseStaffSession | null>(null);
   const [workspace, setWorkspace] = useState<SupabaseWorkspaceDirectory | null>(null);
 
-  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError('');
