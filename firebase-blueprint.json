@@ -1,0 +1,672 @@
+{
+  "entities": {
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Connectivity probe document for verifying live Firestore server connection.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Probe status indicator",
+          "maxLength": 40
+        }
+      },
+      "required": ["status"]
+    },
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Non-PII public profile and operational role mapping for an authenticated Firebase user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the authenticated operator",
+          "maxLength": 120
+        },
+        "roleId": {
+          "type": "string",
+          "description": "Linked operational role ID",
+          "maxLength": 64
+        },
+        "staffUserId": {
+          "type": "string",
+          "description": "Linked staff directory record ID",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "displayName", "roleId", "createdAt", "updatedAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Isolated PII document for an authenticated user (email).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified user email address",
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Server-verified administrator allowlist entry.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin Firebase UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Admin role label",
+          "enum": ["admin"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": ["uid", "role", "createdAt"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Khallegacy operational branch configuration.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Branch ID",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "description": "Short branch code",
+          "maxLength": 16
+        },
+        "name": {
+          "type": "string",
+          "description": "Branch display name",
+          "maxLength": 120
+        },
+        "state": {
+          "type": "string",
+          "description": "Malaysian state",
+          "maxLength": 80
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether branch is active"
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "Creator Firebase UID",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "code", "name", "state", "active", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "Courier": {
+      "title": "Courier",
+      "description": "Courier provider and tracking URL template configuration.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "trackingUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "code", "name", "active", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "RoleConfig": {
+      "title": "RoleConfig",
+      "description": "RBAC role definition and permission list.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Bounded list of permission keys (max 30)"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "description", "active", "permissions", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "StaffUserRecord": {
+      "title": "StaffUserRecord",
+      "description": "Operational staff account metadata with branch and role assignment.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "branchId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "roleId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Inactive"],
+          "maxLength": 20
+        },
+        "lastActive": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "username", "email", "branchId", "roleId", "status", "lastActive", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "InstallmentApplication": {
+      "title": "InstallmentApplication",
+      "description": "Installment application record covering approval, stock follow-up, agreement checking, dispatch, and JCL claim lifecycle.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "caseId": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "applicationDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "customerName": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "icNumber": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "ref1Id": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "bankName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "bankAccountNumber": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "applicationRemarks": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "internalNotes": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "customerFromBranchId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "pickupBranchId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "staffInChargeId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "approvalStatus": {
+          "type": "string",
+          "enum": ["Pending", "Approved", "Rejected"],
+          "maxLength": 20
+        },
+        "approvalDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "approvedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "approvalRemarks": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "products": {
+          "type": "array",
+          "description": "Bounded list of product items (max 20)"
+        },
+        "financing": {
+          "type": "object",
+          "description": "Financing calculation map"
+        },
+        "documents": {
+          "type": "array",
+          "description": "Bounded list of supporting documents (max 30)"
+        },
+        "agreement": {
+          "type": "object",
+          "description": "Agreement receive, checking, and dispatch state"
+        },
+        "stockFollowUp": {
+          "type": "object",
+          "description": "Stock workflow and customer follow-up state"
+        },
+        "taskStatus": {
+          "type": "object",
+          "description": "Section G lifecycle task status map"
+        },
+        "timeline": {
+          "type": "array",
+          "description": "Bounded audit timeline events (max 100)"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "caseId",
+        "applicationDate",
+        "customerName",
+        "icNumber",
+        "phone",
+        "address",
+        "ref1Id",
+        "customerFromBranchId",
+        "staffInChargeId",
+        "approvalStatus",
+        "approvalRemarks",
+        "products",
+        "financing",
+        "documents",
+        "agreement",
+        "timeline",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SaleSubmission": {
+      "title": "SaleSubmission",
+      "description": "Batched sale submission list sent to JCL Credit.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "submissionListId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "submissionDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "createdAtIso": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "agreementIds": {
+          "type": "array",
+          "description": "Bounded list of included application IDs (max 100)"
+        },
+        "agreementCount": {
+          "type": "number"
+        },
+        "totalProductAmount": {
+          "type": "number"
+        },
+        "totalFinanceAmount": {
+          "type": "number"
+        },
+        "totalActualCashPayment": {
+          "type": "number"
+        },
+        "remarks": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "submissionListId",
+        "submissionDate",
+        "createdBy",
+        "agreementIds",
+        "agreementCount",
+        "totalProductAmount",
+        "totalFinanceAmount",
+        "totalActualCashPayment",
+        "remarks",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PostageTracking": {
+      "title": "PostageTracking",
+      "description": "Courier postage tracking record linked to sale submissions.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "saleSubmissionId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "trackingNumber": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "courier": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "IN TRANSIT", "OUT FOR DELIVERY", "DELIVERED", "FAILED / RETURNED"],
+          "maxLength": 30
+        },
+        "remarks": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "description",
+        "trackingNumber",
+        "courier",
+        "status",
+        "updatedBy",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SystemSettingsDoc": {
+      "title": "SystemSettingsDoc",
+      "description": "Global notification preferences and system configuration.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "notifications": {
+          "type": "object"
+        },
+        "systemPrefs": {
+          "type": "object"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "notifications", "systemPrefs", "ownerUid", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/test/{testId}": {
+      "schema": { "$ref": "#/entities/TestConnection" },
+      "description": "Connection health probe document."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "Authenticated user public profile and operational role assignment."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Authenticated user private PII document (email)."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Server-verified administrator allowlist."
+    },
+    "/branches/{branchId}": {
+      "schema": { "$ref": "#/entities/Branch" },
+      "description": "Branch configuration records."
+    },
+    "/couriers/{courierId}": {
+      "schema": { "$ref": "#/entities/Courier" },
+      "description": "Courier configuration records."
+    },
+    "/roles/{roleId}": {
+      "schema": { "$ref": "#/entities/RoleConfig" },
+      "description": "RBAC role and permissions records."
+    },
+    "/staff_users/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffUserRecord" },
+      "description": "Operational staff directory records."
+    },
+    "/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/InstallmentApplication" },
+      "description": "Installment application lifecycle records."
+    },
+    "/sale_submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/SaleSubmission" },
+      "description": "Batched sale submission lists."
+    },
+    "/postage_trackings/{trackingId}": {
+      "schema": { "$ref": "#/entities/PostageTracking" },
+      "description": "Courier postage tracking records."
+    },
+    "/system_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSettingsDoc" },
+      "description": "System and notification settings document."
+    }
+  }
+}

@@ -7,7 +7,6 @@ import {
   LogOut,
   Menu,
   Search,
-  UserCheck,
   X,
 } from 'lucide-react';
 import type {
@@ -52,6 +51,7 @@ const PAGE_META: Record<PageId, { section: string; title: string }> = {
   'to-be-claimed': { section: 'Claim Management', title: 'To Be Claimed' },
   'claimed-history': { section: 'Claim Management', title: 'Claimed History & Data' },
   'reports-analytics': { section: 'Reports', title: 'Reports & Analytics' },
+  'backup-data': { section: 'Reports', title: 'Backup Data' },
   'user-permissions': { section: 'System', title: 'User & Permissions' },
   'system-settings': { section: 'System', title: 'System Settings' },
 };
@@ -66,20 +66,25 @@ export const TopBar: React.FC<TopBarProps> = ({
   recentActivities,
   currentUser,
   currentRole,
-  allUsers,
-  allRoles,
   branches,
-  onSwitchUser,
   onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -99,7 +104,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const meta = PAGE_META[activePage];
   const branchName =
-    branches.find((b) => b.id === currentUser.branchId)?.name ?? 'Shah Alam HQ';
+    branches.find((b) => b.id === currentUser.branchId)?.name ?? 'PARIT RAJA';
 
   const trimmed = searchQuery.trim().toLowerCase();
   const searchResults =
@@ -121,6 +126,19 @@ export const TopBar: React.FC<TopBarProps> = ({
     .map((p) => p[0])
     .join('')
     .toUpperCase();
+
+  const formattedToday = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(now);
+
+  const formattedNowTime = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(now);
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 lg:px-6 h-16 flex items-center justify-between gap-4 shrink-0">
@@ -239,7 +257,9 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Current Date */}
         <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-500 border-r border-slate-200 pr-3.5 whitespace-nowrap">
           <Calendar className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
-          <span className="tabular-nums font-medium text-slate-700">17 Nov 2026</span>
+          <span className="tabular-nums font-medium text-slate-700">
+            {formattedToday} · {formattedNowTime}
+          </span>
         </div>
 
         {/* Notifications */}
@@ -316,38 +336,6 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <p className="text-[11px] text-slate-600 mt-1 font-medium">
                   Role: {currentRole.name} · Branch: {branchName}
                 </p>
-              </div>
-              <div className="p-2">
-                <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Switch Active Operator (RBAC Test)
-                </div>
-                {allUsers
-                  .filter((u) => u.status === 'Active')
-                  .map((u) => {
-                    const role = allRoles.find((r) => r.id === u.roleId);
-                    const isCurrent = u.id === currentUser.id;
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => {
-                          onSwitchUser(u.id);
-                          setProfileOpen(false);
-                        }}
-                        className={`w-full px-2.5 py-2 rounded-lg text-left flex items-center justify-between gap-2 text-xs transition-colors ${
-                          isCurrent
-                            ? 'bg-blue-50 text-blue-700 font-medium'
-                            : 'text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate">{u.name}</div>
-                          <div className="text-[11px] text-slate-500">{role?.name}</div>
-                        </div>
-                        {isCurrent && <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                      </button>
-                    );
-                  })}
               </div>
               <div className="p-2 border-t border-slate-200 bg-slate-50/70">
                 <button

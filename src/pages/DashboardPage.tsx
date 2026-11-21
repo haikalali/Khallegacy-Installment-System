@@ -37,6 +37,7 @@ interface DashboardPageProps {
   saleSubmissions: SaleSubmissionList[];
   recentActivities: ActivityEvent[];
   onNavigate: (page: PageId) => void;
+  onOpenCancelledStock?: (showAllMonths: boolean) => void;
   onSelectApplication: (appId: string) => void;
 }
 
@@ -46,6 +47,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   saleSubmissions,
   recentActivities,
   onNavigate,
+  onOpenCancelledStock,
   onSelectApplication,
 }) => {
   const [period, setPeriod] = useState<DashboardPeriod>('month');
@@ -128,7 +130,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Agreement To Be Receive by Pickup Branch (including virtual branches)
   const branchBreakdown = useMemo(() => {
-    const virtualBranchIds = ['POSTAGE', 'WEB'];
+    const virtualBranchIds = ['POSTAGE', 'WEB'].filter(
+      (vid) =>
+        !branches.some((b) => b.name.toUpperCase() === vid || b.code.toUpperCase() === vid) &&
+        filteredApps.some((a) => a.pickupBranchId === vid),
+    );
     const virtualBranchNames: Record<string, string> = {
       POSTAGE: 'POSTAGE',
       WEB: 'WEB',
@@ -333,7 +339,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {/* 2. Cancelled */}
             <button
               type="button"
-              onClick={() => onNavigate('approval-list')}
+              onClick={() =>
+                onOpenCancelledStock
+                  ? onOpenCancelledStock(period === 'year' || period === 'custom')
+                  : onNavigate('stock-management')
+              }
               className="text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-red-300 transition-colors group shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">

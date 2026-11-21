@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  AlertTriangle,
   Bell,
   BellOff,
   Building2,
@@ -7,6 +8,7 @@ import {
   CheckCheck,
   ClipboardCheck,
   Clock,
+  Database,
   Edit2,
   FileCheck2,
   HandCoins,
@@ -14,6 +16,7 @@ import {
   Plus,
   Settings2,
   Shield,
+  Trash2,
   Truck,
 } from 'lucide-react';
 import type {
@@ -37,6 +40,7 @@ interface SystemSettingsPageProps {
   onAddBranch: (branch: Omit<Branch, 'id'>) => void;
   onUpdateBranch: (id: string, branch: { code: string; name: string; state: string }) => void;
   onToggleBranch: (id: string) => void;
+  onDeleteBranch: (id: string) => void;
   onAddCourier: (courier: Omit<Courier, 'id'>) => void;
   onUpdateCourier: (
     id: string,
@@ -47,6 +51,7 @@ interface SystemSettingsPageProps {
   onToggleRolePermission: (roleId: string, perm: PermissionKey) => void;
   onUpdateNotifications: (prefs: NotificationPreferences) => void;
   onUpdateSystemPrefs: (prefs: SystemPreferences) => void;
+  onClearAllData: () => Promise<void> | void;
 }
 
 type SettingsTab =
@@ -55,7 +60,8 @@ type SettingsTab =
   | 'permissions'
   | 'couriers'
   | 'notifications'
-  | 'general';
+  | 'general'
+  | 'data';
 
 export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
   branches,
@@ -66,6 +72,7 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
   onAddBranch,
   onUpdateBranch,
   onToggleBranch,
+  onDeleteBranch,
   onAddCourier,
   onUpdateCourier,
   onToggleCourier,
@@ -73,8 +80,13 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
   onToggleRolePermission,
   onUpdateNotifications,
   onUpdateSystemPrefs,
+  onClearAllData,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('branches');
+  const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState('');
+  const [isClearingData, setIsClearingData] = useState(false);
 
   // Branch quick-add
   const [branchCode, setBranchCode] = useState('');
@@ -154,6 +166,7 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
     { id: 'couriers', label: 'Courier Configuration', icon: Truck },
     { id: 'notifications', label: 'Notification Preferences', icon: Bell },
     { id: 'general', label: 'General System Preferences', icon: Settings2 },
+    { id: 'data', label: 'Data Management', icon: Database },
   ];
 
   return (
@@ -297,6 +310,14 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
                           }`}
                         >
                           {b.active ? 'Set Inactive' : 'Set Active'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingBranch(b)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-md transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -1009,6 +1030,42 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
         </form>
       )}
 
+      {/* 7. Data Management */}
+      {activeTab === 'data' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5 text-xs">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Data Management</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Padam semua rekod operasi (permohonan, stok, semakan perjanjian, sale submission, postage, dan claim) untuk memulakan data baharu.
+            </p>
+          </div>
+
+          <div className="p-4 border border-red-200 bg-red-50/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-red-800 font-semibold text-xs">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>Clear All Operational Data</span>
+              </div>
+              <p className="text-xs text-red-700/90 leading-relaxed">
+                Tindakan ini akan memadam semua data permohonan, rekod stok, perjanjian, senarai serahan jualan, dan rekod pos daripada sistem serta pangkalan data secara kekal. Tetapan cawangan, kurier, dan peranan staf dikekalkan.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setClearConfirmText('');
+                setShowClearModal(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+              CLEAR ALL DATA
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Edit Branch Card Modal */}
       <Modal
         open={Boolean(editingBranch)}
@@ -1163,6 +1220,122 @@ export const SystemSettingsPage: React.FC<SystemSettingsPageProps> = ({
               No. tracking akan ditambah secara automatik selepas URL (jika berakhir dengan &quot;=&quot;, &quot;/&quot; atau &quot;?&quot;).
             </p>
           </div>
+        </div>
+      </Modal>
+
+      {/* Clear All Data Confirmation Popup Card */}
+      <Modal
+        open={showClearModal}
+        onClose={() => {
+          if (isClearingData) return;
+          setShowClearModal(false);
+          setClearConfirmText('');
+        }}
+        title="CLEAR ALL DATA"
+        maxWidthClass="max-w-md"
+        footer={
+          <>
+            <button
+              type="button"
+              disabled={isClearingData}
+              onClick={() => {
+                setShowClearModal(false);
+                setClearConfirmText('');
+              }}
+              className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={clearConfirmText.trim() !== 'CLEARALLDATA' || isClearingData}
+              onClick={async () => {
+                if (clearConfirmText.trim() !== 'CLEARALLDATA') return;
+                setIsClearingData(true);
+                try {
+                  await onClearAllData();
+                  setShowClearModal(false);
+                  setClearConfirmText('');
+                } finally {
+                  setIsClearingData(false);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {isClearingData ? 'Clearing...' : 'CLEAR ALL DATA'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-900 space-y-1.5">
+            <p className="font-bold text-sm text-red-700">
+              ARE YOU SURE TO CLEAR ALL DATA?
+            </p>
+            <p className="text-xs text-red-700">
+              *reminder all data clear cannot be undone
+            </p>
+            <p className="text-xs text-red-800 font-medium">
+              *if yes, please type this in blank, <span className="font-mono-tabular font-bold">CLEARALLDATA</span>
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="clear-all-data-confirm" className="sr-only">
+              Type CLEARALLDATA to confirm
+            </label>
+            <input
+              id="clear-all-data-confirm"
+              type="text"
+              autoFocus
+              disabled={isClearingData}
+              value={clearConfirmText}
+              onChange={(e) => setClearConfirmText(e.target.value)}
+              placeholder="CLEARALLDATA"
+              className="w-full px-3 py-2 text-xs font-mono-tabular border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15"
+            />
+          </div>
+        </div>
+      </Modal>
+      {/* Delete Branch Confirmation Modal */}
+      <Modal
+        open={Boolean(deletingBranch)}
+        onClose={() => setDeletingBranch(null)}
+        title="Delete Branch"
+        maxWidthClass="max-w-md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeletingBranch(null)}
+              className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!deletingBranch) return;
+                onDeleteBranch(deletingBranch.id);
+                setDeletingBranch(null);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Branch
+            </button>
+          </>
+        }
+      >
+        <div className="text-xs text-slate-700 space-y-2">
+          <p>
+            Are you sure you want to permanently delete branch{' '}
+            <span className="font-semibold text-slate-900">
+              {deletingBranch?.code} · {deletingBranch?.name}
+            </span>
+            ?
+          </p>
         </div>
       </Modal>
     </div>

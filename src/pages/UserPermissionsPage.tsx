@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Plus, Shield, UserCheck, UserX } from 'lucide-react';
+import { Edit2, Plus, Shield, Trash2, UserCheck, UserX } from 'lucide-react';
 import type { Branch, PermissionKey, RoleConfig, StaffUser } from '../types/khallegacy';
 import { ALL_PERMISSIONS } from '../data/mockData';
 import { formatDateTime } from '../utils/businessRules';
@@ -10,8 +10,10 @@ interface UserPermissionsPageProps {
   users: StaffUser[];
   roles: RoleConfig[];
   branches: Branch[];
+  currentUserId: string;
   onToggleUserStatus: (userId: string) => void;
   onSaveUser: (user: Omit<StaffUser, 'id' | 'lastActive'>, existingId?: string) => void;
+  onDeleteUser: (userId: string) => void;
   onToggleRolePermission: (roleId: string, permission: PermissionKey) => void;
 }
 
@@ -19,12 +21,15 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
   users,
   roles,
   branches,
+  currentUserId,
   onToggleUserStatus,
   onSaveUser,
+  onDeleteUser,
   onToggleRolePermission,
 }) => {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<StaffUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<StaffUser | null>(null);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -149,6 +154,20 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
                             <UserCheck className="w-3 h-3" /> Activate
                           </>
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingUser(u)}
+                        disabled={u.id === currentUserId}
+                        title={
+                          u.id === currentUserId
+                            ? 'Cannot delete currently active account'
+                            : 'Delete staff account'
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-700 bg-white border border-red-200 hover:bg-red-50 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -370,6 +389,44 @@ export const UserPermissionsPage: React.FC<UserPermissionsPageProps> = ({
               </select>
             </div>
           </div>
+        </div>
+      </Modal>
+      {/* Delete Staff Account Confirmation Modal */}
+      <Modal
+        open={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        title="Delete Staff Account"
+        maxWidthClass="max-w-md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeletingUser(null)}
+              className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!deletingUser) return;
+                onDeleteUser(deletingUser.id);
+                setDeletingUser(null);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Account
+            </button>
+          </>
+        }
+      >
+        <div className="text-xs text-slate-700">
+          Are you sure you want to permanently delete staff account{' '}
+          <span className="font-semibold text-slate-900">
+            {deletingUser?.name} ({deletingUser?.username})
+          </span>
+          ?
         </div>
       </Modal>
     </div>

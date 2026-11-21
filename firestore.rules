@@ -1,0 +1,529 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Global Hardened Primitives
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isVerifiedUser() && uid is string && uid.size() <= 128 && request.auth.uid == uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'khallegacyconstruction@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isShortString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isNonEmptyString(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Helpers (Pillar 2)
+    // -------------------------------------------------------------------------
+    function isValidUserPublic(data) {
+      return data.uid is string
+        && isValidId(data.uid)
+        && isNonEmptyString(data.displayName, 120)
+        && isNonEmptyString(data.roleId, 64)
+        && (!('staffUserId' in data) || isShortString(data.staffUserId, 64))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.uid is string
+        && isValidId(data.uid)
+        && isNonEmptyString(data.email, 160)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBranch(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.code, 16)
+        && isNonEmptyString(data.name, 120)
+        && isNonEmptyString(data.state, 80)
+        && data.active is bool
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCourier(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.code, 24)
+        && isNonEmptyString(data.name, 100)
+        && data.active is bool
+        && (!('trackingUrl' in data) || isShortString(data.trackingUrl, 300))
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRoleConfig(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.name, 80)
+        && isShortString(data.description, 300)
+        && data.active is bool
+        && data.permissions is list
+        && data.permissions.size() <= 30
+        && (data.permissions.size() == 0 || data.permissions[0] is string)
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStaffUser(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.name, 120)
+        && isNonEmptyString(data.username, 64)
+        && isNonEmptyString(data.email, 160)
+        && isNonEmptyString(data.branchId, 64)
+        && isNonEmptyString(data.roleId, 64)
+        && (data.status == 'Active' || data.status == 'Inactive')
+        && isNonEmptyString(data.lastActive, 40)
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidApplication(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.caseId, 40)
+        && isNonEmptyString(data.applicationDate, 20)
+        && isNonEmptyString(data.customerName, 150)
+        && isNonEmptyString(data.icNumber, 30)
+        && isNonEmptyString(data.phone, 30)
+        && isShortString(data.address, 400)
+        && isShortString(data.ref1Id, 64)
+        && (!('bankName' in data) || isShortString(data.bankName, 100))
+        && (!('bankAccountNumber' in data) || isShortString(data.bankAccountNumber, 60))
+        && (!('applicationRemarks' in data) || isShortString(data.applicationRemarks, 500))
+        && (!('internalNotes' in data) || isShortString(data.internalNotes, 500))
+        && isNonEmptyString(data.customerFromBranchId, 64)
+        && (!('pickupBranchId' in data) || data.pickupBranchId == null || isShortString(data.pickupBranchId, 64))
+        && isNonEmptyString(data.staffInChargeId, 64)
+        && (data.approvalStatus == 'Pending' || data.approvalStatus == 'Approved' || data.approvalStatus == 'Rejected')
+        && (!('approvalDate' in data) || data.approvalDate == null || isShortString(data.approvalDate, 40))
+        && (!('approvedBy' in data) || data.approvedBy == null || isShortString(data.approvedBy, 120))
+        && isShortString(data.approvalRemarks, 500)
+        && (!('category' in data) || isShortString(data.category, 40))
+        && data.products is list
+        && data.products.size() > 0
+        && data.products.size() <= 20
+        && data.products[0] is map
+        && data.financing is map
+        && data.documents is list
+        && data.documents.size() <= 30
+        && (data.documents.size() == 0 || data.documents[0] is map)
+        && data.agreement is map
+        && (!('stockFollowUp' in data) || data.stockFollowUp is map)
+        && (!('taskStatus' in data) || data.taskStatus is map)
+        && data.timeline is list
+        && data.timeline.size() <= 100
+        && (data.timeline.size() == 0 || data.timeline[0] is map)
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSaleSubmission(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.submissionListId, 64)
+        && isNonEmptyString(data.submissionDate, 20)
+        && (!('createdAtIso' in data) || isShortString(data.createdAtIso, 40))
+        && isNonEmptyString(data.createdBy, 120)
+        && data.agreementIds is list
+        && data.agreementIds.size() <= 100
+        && (data.agreementIds.size() == 0 || data.agreementIds[0] is string)
+        && data.agreementCount is number
+        && data.totalProductAmount is number
+        && data.totalFinanceAmount is number
+        && data.totalActualCashPayment is number
+        && isShortString(data.remarks, 500)
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPostageTracking(data) {
+      return isValidId(data.id)
+        && isNonEmptyString(data.date, 20)
+        && isShortString(data.description, 300)
+        && (!('saleSubmissionId' in data) || data.saleSubmissionId == null || isShortString(data.saleSubmissionId, 64))
+        && isNonEmptyString(data.trackingNumber, 80)
+        && isNonEmptyString(data.courier, 80)
+        && (
+          data.status == 'PENDING' ||
+          data.status == 'IN TRANSIT' ||
+          data.status == 'OUT FOR DELIVERY' ||
+          data.status == 'DELIVERED' ||
+          data.status == 'FAILED / RETURNED'
+        )
+        && (!('remarks' in data) || isShortString(data.remarks, 500))
+        && (!('updatedAtIso' in data) || isShortString(data.updatedAtIso, 40))
+        && isNonEmptyString(data.updatedBy, 120)
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSystemSettings(data) {
+      return isValidId(data.id)
+        && data.notifications is map
+        && data.systemPrefs is map
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+    match /test/{testId} {
+      allow get: if isVerifiedUser() && isValidId(testId) && testId == 'connection';
+      allow list, create, update, delete: if false;
+    }
+
+    match /admins/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPublic(incoming())
+        && incoming().keys().hasAll(['uid', 'displayName', 'roleId', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['uid', 'displayName', 'roleId', 'staffUserId', 'createdAt', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (isAdmin() || incoming().roleId == 'role-sales-admin');
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserPublic(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isOwner(userId)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+            && incoming().roleId == existing().roleId
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+
+      match /private/{docId} {
+        allow get: if isVerifiedUser() && isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin());
+        allow list: if isBootstrappedAdmin();
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && isOwner(userId)
+          && isValidUserPrivate(incoming())
+          && incoming().keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt'])
+          && incoming().keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt'])
+          && incoming().uid == userId
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && isValidUserPrivate(incoming())
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin()
+            || (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt']))
+          );
+        allow delete: if isAdmin() && isValidId(userId) && isValidId(docId);
+      }
+    }
+
+    match /branches/{branchId} {
+      allow get: if isVerifiedUser() && isValidId(branchId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(branchId)
+        && isValidBranch(incoming())
+        && incoming().keys().hasAll(['id', 'code', 'name', 'state', 'active', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['id', 'code', 'name', 'state', 'active', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().id == branchId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(branchId)
+        && isValidBranch(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['code', 'name', 'state', 'active', 'updatedAt']))
+        );
+      allow delete: if isVerifiedUser() && isValidId(branchId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    match /couriers/{courierId} {
+      allow get: if isVerifiedUser() && isValidId(courierId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(courierId)
+        && isValidCourier(incoming())
+        && incoming().keys().hasAll(['id', 'code', 'name', 'active', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['id', 'code', 'name', 'active', 'trackingUrl', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().id == courierId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(courierId)
+        && isValidCourier(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['code', 'name', 'active', 'trackingUrl', 'updatedAt']))
+        );
+      allow delete: if isAdmin() && isValidId(courierId);
+    }
+
+    match /roles/{roleId} {
+      allow get: if isVerifiedUser() && isValidId(roleId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(roleId)
+        && isValidRoleConfig(incoming())
+        && incoming().keys().hasAll(['id', 'name', 'description', 'active', 'permissions', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['id', 'name', 'description', 'active', 'permissions', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().id == roleId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(roleId)
+        && isValidRoleConfig(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'active', 'permissions', 'updatedAt']))
+        );
+      allow delete: if isAdmin() && isValidId(roleId);
+    }
+
+    match /staff_users/{staffId} {
+      allow get: if isVerifiedUser() && isValidId(staffId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(staffId)
+        && isValidStaffUser(incoming())
+        && incoming().keys().hasAll(['id', 'name', 'username', 'email', 'branchId', 'roleId', 'status', 'lastActive', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['id', 'name', 'username', 'email', 'branchId', 'roleId', 'status', 'lastActive', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().id == staffId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(staffId)
+        && isValidStaffUser(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'username', 'email', 'branchId', 'roleId', 'status', 'lastActive', 'updatedAt']))
+        );
+      allow delete: if isVerifiedUser() && isValidId(staffId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    match /applications/{applicationId} {
+      allow get: if isVerifiedUser() && isValidId(applicationId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(applicationId)
+        && isValidApplication(incoming())
+        && incoming().keys().hasAll([
+          'id', 'caseId', 'applicationDate', 'customerName', 'icNumber', 'phone', 'address',
+          'ref1Id', 'customerFromBranchId', 'staffInChargeId', 'approvalStatus',
+          'approvalRemarks', 'products', 'financing', 'documents', 'agreement', 'timeline',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().keys().hasOnly([
+          'id', 'caseId', 'applicationDate', 'customerName', 'icNumber', 'phone', 'address',
+          'ref1Id', 'bankName', 'bankAccountNumber', 'applicationRemarks', 'internalNotes',
+          'customerFromBranchId', 'pickupBranchId', 'staffInChargeId', 'approvalStatus',
+          'approvalDate', 'approvedBy', 'approvalRemarks', 'category', 'products', 'financing',
+          'documents', 'agreement', 'stockFollowUp', 'taskStatus', 'timeline',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().id == applicationId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(applicationId)
+        && isValidApplication(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isOwner(existing().ownerUid)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'caseId', 'applicationDate', 'customerName', 'icNumber', 'phone', 'address',
+              'ref1Id', 'bankName', 'bankAccountNumber', 'applicationRemarks', 'internalNotes',
+              'customerFromBranchId', 'pickupBranchId', 'staffInChargeId', 'approvalStatus',
+              'approvalDate', 'approvedBy', 'approvalRemarks', 'category', 'products', 'financing',
+              'documents', 'agreement', 'stockFollowUp', 'taskStatus', 'timeline', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isVerifiedUser() && isValidId(applicationId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    match /sale_submissions/{submissionId} {
+      allow get: if isVerifiedUser() && isValidId(submissionId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(submissionId)
+        && isValidSaleSubmission(incoming())
+        && incoming().keys().hasAll([
+          'id', 'submissionListId', 'submissionDate', 'createdBy', 'agreementIds',
+          'agreementCount', 'totalProductAmount', 'totalFinanceAmount', 'totalActualCashPayment',
+          'remarks', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().keys().hasOnly([
+          'id', 'submissionListId', 'submissionDate', 'createdAtIso', 'createdBy', 'agreementIds',
+          'agreementCount', 'totalProductAmount', 'totalFinanceAmount', 'totalActualCashPayment',
+          'remarks', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().id == submissionId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(submissionId)
+        && isValidSaleSubmission(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['remarks', 'updatedAt']))
+        );
+      allow delete: if isVerifiedUser() && isValidId(submissionId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    match /postage_trackings/{trackingId} {
+      allow get: if isVerifiedUser() && isValidId(trackingId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(trackingId)
+        && isValidPostageTracking(incoming())
+        && incoming().keys().hasAll([
+          'id', 'date', 'description', 'trackingNumber', 'courier', 'status',
+          'updatedBy', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().keys().hasOnly([
+          'id', 'date', 'description', 'saleSubmissionId', 'trackingNumber', 'courier', 'status',
+          'remarks', 'updatedAtIso', 'updatedBy', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && incoming().id == trackingId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(trackingId)
+        && isValidPostageTracking(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'remarks', 'updatedAtIso', 'updatedBy', 'updatedAt']))
+        );
+      allow delete: if isVerifiedUser() && isValidId(trackingId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    match /system_settings/{settingId} {
+      allow get: if isVerifiedUser() && isValidId(settingId) && (isOwner(existing().ownerUid) || isAdmin());
+      allow list: if isVerifiedUser() && (isBootstrappedAdmin() || existing().ownerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(settingId)
+        && isValidSystemSettings(incoming())
+        && incoming().keys().hasAll(['id', 'notifications', 'systemPrefs', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().keys().hasOnly(['id', 'notifications', 'systemPrefs', 'ownerUid', 'createdAt', 'updatedAt'])
+        && incoming().id == settingId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(settingId)
+        && isValidSystemSettings(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (isOwner(existing().ownerUid) && incoming().diff(existing()).affectedKeys().hasOnly(['notifications', 'systemPrefs', 'updatedAt']))
+        );
+      allow delete: if isAdmin() && isValidId(settingId);
+    }
+  }
+}

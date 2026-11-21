@@ -12,6 +12,7 @@ export type PageId =
   | 'to-be-claimed'
   | 'claimed-history'
   | 'reports-analytics'
+  | 'backup-data'
   | 'user-permissions'
   | 'system-settings';
 
@@ -312,6 +313,7 @@ export interface SystemPreferences {
   defaultPageSize: number;
   fixedDispatchDestination: string;
   autoArchiveDays: number;
+  directoryVersion?: number;
 }
 
 export type DashboardPeriod = 'today' | 'week' | 'month' | 'year' | 'custom';

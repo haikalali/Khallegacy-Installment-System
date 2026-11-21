@@ -29,6 +29,8 @@ interface StockManagementPageProps {
   applications: InstallmentApplication[];
   branches: Branch[];
   canManage: boolean;
+  initialDecisionFilter?: CustomerStockDecision | '';
+  initialShowAllMonths?: boolean;
   onUpdateStockFollowUp: (appId: string, payload: UpdateStockFollowUpPayload) => void;
   onPassStockToBranch: (appId: string, passDate: string) => void;
 }
@@ -80,17 +82,22 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
   applications,
   branches,
   canManage,
+  initialDecisionFilter = '',
+  initialShowAllMonths = false,
   onUpdateStockFollowUp,
   onPassStockToBranch,
 }) => {
-  const [monthFilter, setMonthFilter] = useState(DEFAULT_CURRENT_MONTH);
+  const [monthFilter, setMonthFilter] = useState(
+    initialShowAllMonths ? '' : DEFAULT_CURRENT_MONTH,
+  );
   const [yearFilter, setYearFilter] = useState(DEFAULT_CURRENT_YEAR);
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('');
-  const [decisionFilter, setDecisionFilter] = useState('');
+  const [decisionFilter, setDecisionFilter] = useState<string>(initialDecisionFilter);
   const [collectionFilter, setCollectionFilter] = useState('');
   const [fromBranchFilter, setFromBranchFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  const [productFilter, setProductFilter] = useState('');
   const [passStatusFilter, setPassStatusFilter] = useState('');
   const [approvalDateFilter, setApprovalDateFilter] = useState('');
   const [activeStatFilter, setActiveStatFilter] = useState<StatFilterKey>('');
@@ -168,6 +175,17 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
     });
   }, [approvedRecords, yearFilter, monthFilter]);
 
+  const productOptions = useMemo(() => {
+    const set = new Set<string>();
+    approvedRecords.forEach((r) => {
+      r.app.products.forEach((p) => {
+        const name = p.productName.trim();
+        if (name) set.add(name);
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [approvedRecords]);
+
   const stats = useMemo(() => {
     const active = monthRecords.filter((r) => r.followUp.customerDecision !== 'CANCELLED');
     return {
@@ -228,6 +246,10 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
             ? r.app.pickupBranchId === null
             : r.app.pickupBranchId === branchFilter);
 
+        const productMatch =
+          !productFilter ||
+          r.app.products.some((p) => p.productName.trim() === productFilter);
+
         const passStatusMatch =
           !passStatusFilter ||
           (passStatusFilter === 'READY_TO_PASS'
@@ -246,6 +268,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
           collectionMatch &&
           fromBranchMatch &&
           branchMatch &&
+          productMatch &&
           passStatusMatch &&
           dateMatch
         );
@@ -305,6 +328,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
     collectionFilter,
     fromBranchFilter,
     branchFilter,
+    productFilter,
     passStatusFilter,
     approvalDateFilter,
     sortKey,
@@ -345,6 +369,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
     setCollectionFilter('');
     setFromBranchFilter('');
     setBranchFilter('');
+    setProductFilter('');
     setPassStatusFilter('');
     setApprovalDateFilter('');
     setActiveStatFilter('');
@@ -358,6 +383,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
       collectionFilter ||
       fromBranchFilter ||
       branchFilter ||
+      productFilter ||
       passStatusFilter ||
       approvalDateFilter ||
       searchQuery ||
@@ -730,7 +756,7 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <label htmlFor="stock-from-branch-filter" className="sr-only">
               Filter by Customer Original Branch
             </label>
@@ -749,11 +775,13 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                   {b.name}
                 </option>
               ))}
-              <option value="WEB">WEB</option>
+              {!branches.some((b) => b.code === 'WEB' || b.id === 'WEB') && (
+                <option value="WEB">WEB</option>
+              )}
             </select>
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <label htmlFor="stock-pickup-filter" className="sr-only">
               Filter by Pickup Branch
             </label>
@@ -773,11 +801,35 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                   {b.name}
                 </option>
               ))}
-              <option value="POSTAGE">POSTAGE</option>
+              {!branches.some(
+                (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
+              ) && <option value="POSTAGE">POSTAGE</option>}
             </select>
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
+            <label htmlFor="stock-product-filter" className="sr-only">
+              Filter by Product
+            </label>
+            <select
+              id="stock-product-filter"
+              value={productFilter}
+              onChange={(e) => {
+                setProductFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500"
+            >
+              <option value="">All Products</option>
+              {productOptions.map((prod) => (
+                <option key={prod} value={prod}>
+                  {prod}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-3">
             <label htmlFor="stock-approval-date-filter" className="sr-only">
               Filter by Approval Date
             </label>
@@ -905,7 +957,8 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                         className="py-3 px-1.5 whitespace-nowrap text-slate-700 max-w-[130px] truncate"
                         title={pickupText}
                       >
-                        {app.pickupBranchId === 'POSTAGE' ? (
+                        {app.pickupBranchId === 'POSTAGE' ||
+                        branches.find((b) => b.id === app.pickupBranchId)?.code === 'POS' ? (
                           <StatusBadge status="POSTAGE" compact />
                         ) : app.pickupBranchId === null ? (
                           <span className="text-amber-700 font-medium">Belum Ditentukan</span>
@@ -1109,7 +1162,10 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="WEB">WEB</option>
+                    {(formFromBranch === 'WEB' ||
+                      !branches.some((b) => b.code === 'WEB' || b.id === 'WEB')) && (
+                      <option value="WEB">WEB</option>
+                    )}
                   </select>
                 </div>
 
@@ -1132,7 +1188,10 @@ export const StockManagementPage: React.FC<StockManagementPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="POSTAGE">POSTAGE</option>
+                    {(formPickupBranch === 'POSTAGE' ||
+                      !branches.some(
+                        (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
+                      )) && <option value="POSTAGE">POSTAGE</option>}
                   </select>
                 </div>
               </div>

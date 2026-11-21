@@ -495,7 +495,9 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="WEB">WEB</option>
+                    {!branches.some((b) => b.code === 'WEB' || b.id === 'WEB') && (
+                      <option value="WEB">WEB</option>
+                    )}
                   </select>
                   <p className="text-[11px] text-slate-400 mt-1">
                     Cawangan asal yang menguruskan permohonan pelanggan.
@@ -518,7 +520,9 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="POSTAGE">POSTAGE</option>
+                    {!branches.some(
+                      (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
+                    ) && <option value="POSTAGE">POSTAGE</option>}
                   </select>
                   <p className="text-[11px] text-slate-400 mt-1">
                     Boleh ditentukan kemudian jika belum diketahui.
@@ -633,7 +637,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                       <th className="py-2.5 px-3 w-[36%]">PRODUCT / DESCRIPTION</th>
-                      <th className="py-2.5 px-3 w-[22%]">SPEC / COLOUR</th>
+                      <th className="py-2.5 px-3 w-[22%]">COLOUR PRODUCT</th>
                       <th className="py-2.5 px-3 w-[12%]">QTY</th>
                       <th className="py-2.5 px-3 w-[15%]">UNIT PRICE (RM)</th>
                       <th className="py-2.5 px-3 w-[12%] text-right">SUBTOTAL</th>
@@ -672,7 +676,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
                                   prev.map((p) => (p.id === row.id ? { ...p, model: val } : p)),
                                 );
                               }}
-                              placeholder="256GB / Colour"
+                              placeholder="Colour"
                               className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-md bg-white text-slate-900 focus:outline-none focus:border-blue-500"
                             />
                           </td>

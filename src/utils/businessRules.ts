@@ -38,6 +38,41 @@ export function countApplicationsAddedOnDate(
   return apps.filter((a) => a.applicationDate === targetDate).length;
 }
 
+export function getLocalDateKey(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getLocalDateTimeIso(date: Date = new Date()): string {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${getLocalDateKey(date)}T${hours}:${minutes}:${seconds}`;
+}
+
+export function extractCreatedDateKey(app: InstallmentApplication): string | null {
+  const createdEvent = app.timeline?.find((evt) => evt.actionType === 'Application Created');
+  const rawTimestamp = createdEvent?.timestamp;
+  if (!rawTimestamp) return null;
+  if (/([zZ]|[+-]\d{2}:\d{2})$/.test(rawTimestamp)) {
+    const parsed = new Date(rawTimestamp);
+    if (!Number.isNaN(parsed.getTime())) {
+      return getLocalDateKey(parsed);
+    }
+  }
+  const match = rawTimestamp.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+export function countApplicationsCreatedOnDate(
+  apps: InstallmentApplication[],
+  targetDate: string = getLocalDateKey(),
+): number {
+  return apps.filter((a) => extractCreatedDateKey(a) === targetDate).length;
+}
+
 export function formatRM(amount: number): string {
   return `RM ${amount.toLocaleString('en-MY', {
     minimumFractionDigits: 2,

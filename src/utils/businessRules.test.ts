@@ -8,6 +8,7 @@ import {
   computeSistemRekodReport,
   confirmJclReceiptTransition,
   countApplicationsAddedOnDate,
+  countApplicationsCreatedOnDate,
   createNewApplicationTransition,
   createSaleSubmissionTransition,
   DEFAULT_TASK_STATUS,
@@ -410,6 +411,37 @@ test('New Application financing formula & creation validates uniqueness, deposit
   assert.equal(created.financing.monthlyInstallment, 210);
   assert.equal(created.timeline.length, 1);
   assert.equal(countApplicationsAddedOnDate([created, ...existing], SYSTEM_TODAY_DATE), 1);
+  assert.equal(countApplicationsCreatedOnDate([created, ...existing], '2026-11-17'), 1);
+  assert.equal(countApplicationsCreatedOnDate([created, ...existing], '2026-11-20'), 0);
+
+  const createdTodayBackdated = createNewApplicationTransition(
+    [created, ...existing],
+    {
+      caseId: 'KHL-2026-1000',
+      customerName: 'Aina Sofea',
+      icNumber: '990101-01-1234',
+      phone: '012-3456789',
+      ref1Id: 'REF-100',
+      customerFromBranchId: 'br-sa',
+      pickupBranchId: 'br-sa',
+      applicationDate: '2026-11-10',
+      bankName: 'Maybank',
+      bankAccountNumber: '1234567890',
+      applicationRemarks: '',
+      internalNotes: '',
+      products: [{ productName: 'iPhone 17', model: 'Black', quantity: 1, unitPrice: 4000 }],
+      deposit: 0,
+      agreementFee: 88,
+      processingFee: 50,
+      sstAmount: 4,
+      stampDutyFee: 25,
+      actualCashPayment: 167,
+      monthlyInstallment: 200,
+    },
+    OPERATOR,
+    '2026-11-20T09:30:00',
+  );
+  assert.equal(countApplicationsCreatedOnDate([createdTodayBackdated, created, ...existing], '2026-11-20'), 1);
 });
 
 test('Stock Management follow-up validates cancellation remarks, logs field changes, and Pass Stock unlocks TERIMA', () => {

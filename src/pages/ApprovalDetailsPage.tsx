@@ -570,7 +570,10 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="WEB">WEB</option>
+                    {(fromBranchInput === 'WEB' ||
+                      !branches.some((b) => b.code === 'WEB' || b.id === 'WEB')) && (
+                      <option value="WEB">WEB</option>
+                    )}
                   </select>
                 </div>
 
@@ -590,7 +593,10 @@ export const ApprovalDetailsPage: React.FC<ApprovalDetailsPageProps> = ({
                         {b.name}
                       </option>
                     ))}
-                    <option value="POSTAGE">POSTAGE</option>
+                    {(pickupBranchInput === 'POSTAGE' ||
+                      !branches.some(
+                        (b) => b.code === 'POS' || b.name.toUpperCase() === 'POSTAGE',
+                      )) && <option value="POSTAGE">POSTAGE</option>}
                   </select>
                 </div>
 

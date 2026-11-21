@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { onAuthStateChanged, signInWithPopup, signOut, type User as FirebaseUser } from 'firebase/auth';
 import {
   INITIAL_APPLICATIONS,
   INITIAL_BRANCHES,
@@ -14,6 +15,7 @@ import type {
   Branch,
   CheckingChecklist,
   Courier,
+  CustomerStockDecision,
   InstallmentApplication,
   NotificationPreferences,
   PageId,
@@ -29,19 +31,20 @@ import type {
 import {
   claimAgreementTransition,
   computeDashboardMetrics,
-  countApplicationsAddedOnDate,
+  countApplicationsCreatedOnDate,
   createNewApplicationTransition,
   createSaleSubmissionTransition,
   deleteApplicationTransition,
   deriveStockFollowUp,
   deriveTaskStatus,
   formatRM,
+  getLocalDateKey,
+  getLocalDateTimeIso,
   isEligibleForClaim,
   isEligibleForSaleSubmission,
   mapPostageStatusToTaskSubmission,
   passStockToBranchTransition,
   receiveAgreementTransition,
-  SYSTEM_TODAY_DATE,
   updateApplicationDetailsTransition,
   updateCheckingTransition,
   updateStockFollowUpTransition,
@@ -69,6 +72,7 @@ import { AgreementHistoryPage } from './pages/AgreementHistoryPage';
 import { ToBeClaimedPage } from './pages/ToBeClaimedPage';
 import { ClaimedHistoryPage } from './pages/ClaimedHistoryPage';
 import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage';
+import { BackupDataPage } from './pages/BackupDataPage';
 import { UserPermissionsPage } from './pages/UserPermissionsPage';
 import { SystemSettingsPage } from './pages/SystemSettingsPage';
 import {
@@ -78,6 +82,25 @@ import {
   saveAuthUserId,
   type AuthResult,
 } from './utils/auth';
+import { auth, googleProvider } from './lib/firebase';
+import {
+  clearAllOperationalDataFromCloud,
+  deleteApplicationFromCloud,
+  deleteBranchFromCloud,
+  deleteStaffUserFromCloud,
+  ensureUserProfile,
+  isBootstrappedAdminEmail,
+  saveApplicationToCloud,
+  saveBranchToCloud,
+  saveCourierToCloud,
+  savePostageTrackingToCloud,
+  saveRoleToCloud,
+  saveSaleSubmissionToCloud,
+  saveSettingsToCloud,
+  saveStaffUserToCloud,
+  seedInitialWorkspaceIfEmpty,
+  subscribeWorkspaceCollections,
+} from './lib/firestoreSync';
 import { LoginPage } from './pages/LoginPage';
 import { ErrorState } from './components/StateViews';
 
@@ -99,15 +122,19 @@ export default function App() {
     return found ?? null;
   }, []);
 
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(initialSavedUser));
   const [currentUserId, setCurrentUserId] = useState<string>(
     () => initialSavedUser?.id ?? INITIAL_USERS[0].id,
   );
   const [activePage, setActivePage] = useState<PageId>('dashboard');
+  const [stockDecisionPreset, setStockDecisionPreset] = useState<CustomerStockDecision | ''>('');
+  const [stockShowAllMonths, setStockShowAllMonths] = useState(false);
   const [lastPageBeforeDetails, setLastPageBeforeDetails] = useState<PageId>('approval-list');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [todayDateKey, setTodayDateKey] = useState<string>(() => getLocalDateKey());
   const [saleSubmissions, setSaleSubmissions] = useState<SaleSubmissionList[]>([]);
   const [postageTrackings, setPostageTrackings] = useState<PostageTrackingRecord[]>(
     INITIAL_POSTAGE_TRACKINGS,
@@ -138,6 +165,89 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const syncToCloud = useCallback(
+    (task: Promise<void>) => {
+      void task.catch((err) => {
+        console.error('Cloud sync error:', err);
+        addToast('error', 'Database Sync Error', 'Unable to save changes to cloud database.');
+      });
+    },
+    [addToast],
+  );
+
+  useEffect(() => {
+    let unsubFirestore: (() => void) | undefined;
+    let active = true;
+
+    const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (unsubFirestore) {
+        unsubFirestore();
+        unsubFirestore = undefined;
+      }
+
+      if (!fbUser || !fbUser.emailVerified) {
+        if (active) setFirebaseUser(null);
+        return;
+      }
+
+      if (!active) return;
+      setFirebaseUser(fbUser);
+
+      const emailLower = (fbUser.email ?? '').toLowerCase();
+      const matchedStaff =
+        INITIAL_USERS.find((u) => u.email.toLowerCase() === emailLower && u.status === 'Active') ??
+        (isBootstrappedAdminEmail(fbUser.email)
+          ? INITIAL_USERS[0]
+          : INITIAL_USERS.find((u) => u.roleId === 'role-sales-admin') ?? INITIAL_USERS[0]);
+
+      setCurrentUserId(matchedStaff.id);
+      saveAuthUserId(matchedStaff.id, true);
+      setIsAuthenticated(true);
+
+      try {
+        await ensureUserProfile(fbUser, matchedStaff);
+        await seedInitialWorkspaceIfEmpty(fbUser);
+      } catch (err) {
+        console.error('Workspace initialization error:', err);
+      }
+
+      if (!active) return;
+      unsubFirestore = subscribeWorkspaceCollections(
+        fbUser,
+        {
+          onBranches: setBranches,
+          onCouriers: setCouriers,
+          onRoles: setRoles,
+          onStaffUsers: setUsers,
+          onApplications: setApplications,
+          onSaleSubmissions: setSaleSubmissions,
+          onPostageTrackings: setPostageTrackings,
+          onSettings: (nextNotif, nextSys) => {
+            setNotifications(nextNotif);
+            setSystemPrefs(nextSys);
+          },
+        },
+        (err) => {
+          console.error('Firestore listener error:', err);
+        },
+      );
+    });
+
+    return () => {
+      active = false;
+      unsubAuth();
+      if (unsubFirestore) unsubFirestore();
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const nextKey = getLocalDateKey();
+      setTodayDateKey((prev) => (prev === nextKey ? prev : nextKey));
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const hasPermission = useCallback(
     (perm: PermissionKey) => userHasPermission(currentUser, roles, perm),
     [currentUser, roles],
@@ -145,11 +255,20 @@ export default function App() {
 
   const navigateTo = useCallback(
     (page: PageId) => {
+      setStockDecisionPreset('');
+      setStockShowAllMonths(false);
       setActivePage(page);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     [],
   );
+
+  const handleOpenCancelledStock = useCallback((showAllMonths: boolean) => {
+    setStockDecisionPreset('CANCELLED');
+    setStockShowAllMonths(showAllMonths);
+    setActivePage('stock-management');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const openApplicationDetails = useCallback(
     (appId: string) => {
@@ -172,8 +291,8 @@ export default function App() {
   const metrics = useMemo(() => computeDashboardMetrics(applications), [applications]);
 
   const todayNewApplicationsCount = useMemo(
-    () => countApplicationsAddedOnDate(applications, SYSTEM_TODAY_DATE),
-    [applications],
+    () => countApplicationsCreatedOnDate(applications, todayDateKey),
+    [applications, todayDateKey],
   );
 
   const toBeSubmittedCount = useMemo(
@@ -232,10 +351,16 @@ export default function App() {
     payload: NewApplicationPayload,
     downloadCoverPage: boolean,
   ): boolean => {
-    const nowIso = new Date().toISOString().slice(0, 19);
+    const now = new Date();
+    const nowIso = getLocalDateTimeIso(now);
+    const currentDateKey = getLocalDateKey(now);
+    setTodayDateKey((prev) => (prev === currentDateKey ? prev : currentDateKey));
     try {
       const created = createNewApplicationTransition(applications, payload, currentUser, nowIso);
       setApplications((prev) => [created, ...prev]);
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(created, firebaseUser.uid));
+      }
       if (downloadCoverPage) {
         void triggerCoverPagePdfDownload(created, false);
       }
@@ -257,14 +382,20 @@ export default function App() {
 
   const handleUpdateStockFollowUp = (appId: string, payload: UpdateStockFollowUpPayload) => {
     const nowIso = new Date().toISOString().slice(0, 19);
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return;
     try {
-      setApplications((prev) =>
-        prev.map((app) =>
-          app.id === appId
-            ? updateStockFollowUpTransition(app, payload, branches, currentUser.name, nowIso)
-            : app,
-        ),
+      const updatedApp = updateStockFollowUpTransition(
+        target,
+        payload,
+        branches,
+        currentUser.name,
+        nowIso,
       );
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast('success', 'Customer Follow-up Saved', 'Change history and stock status updated.');
     } catch (err) {
       addToast('error', 'Stock Update Failed', err instanceof Error ? err.message : 'Error');
@@ -273,19 +404,18 @@ export default function App() {
 
   const handlePassStockToBranch = (appId: string, passDate: string) => {
     const nowIso = new Date().toISOString().slice(0, 19);
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return;
     try {
-      let passedCase = '';
-      setApplications((prev) =>
-        prev.map((app) => {
-          if (app.id !== appId) return app;
-          passedCase = app.caseId;
-          return passStockToBranchTransition(app, passDate, currentUser.name, nowIso);
-        }),
-      );
+      const updatedApp = passStockToBranchTransition(target, passDate, currentUser.name, nowIso);
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast(
         'success',
         'Stock Passed to Branch',
-        `${passedCase} (${passDate}) is now eligible for Agreement Receive (TERIMA).`,
+        `${updatedApp.caseId} (${passDate}) is now eligible for Agreement Receive (TERIMA).`,
       );
     } catch (err) {
       addToast('error', 'Pass Stock Failed', err instanceof Error ? err.message : 'Error');
@@ -298,27 +428,23 @@ export default function App() {
   ): boolean => {
     const nowIso = new Date().toISOString().slice(0, 19);
     try {
-      let updatedCaseId = '';
-      setApplications((prev) =>
-        prev.map((app) => {
-          if (app.id !== appId) return app;
-          const next = updateApplicationDetailsTransition(
-            prev,
-            appId,
-            payload,
-            branches,
-            users,
-            currentUser.name,
-            nowIso,
-          );
-          updatedCaseId = next.caseId;
-          return next;
-        }),
+      const updatedApp = updateApplicationDetailsTransition(
+        applications,
+        appId,
+        payload,
+        branches,
+        users,
+        currentUser.name,
+        nowIso,
       );
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast(
         'success',
         'Application Details Updated',
-        `${updatedCaseId || payload.caseId} changes saved and logged to Activity Timeline.`,
+        `${updatedApp.caseId || payload.caseId} changes saved and logged to Activity Timeline.`,
       );
       return true;
     } catch (err) {
@@ -335,6 +461,9 @@ export default function App() {
     const target = applications.find((a) => a.id === appId);
     const remaining = deleteApplicationTransition(applications, appId);
     setApplications(remaining);
+    if (firebaseUser) {
+      syncToCloud(deleteApplicationFromCloud(appId));
+    }
     setSelectedAppId(remaining[0]?.id ?? '');
     setActivePage('approval-list');
     addToast(
@@ -348,19 +477,18 @@ export default function App() {
 
   const handleReceiveAgreement = (appId: string) => {
     const nowIso = new Date().toISOString().slice(0, 19);
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return;
     try {
-      let receivedCase = '';
-      setApplications((prev) =>
-        prev.map((app) => {
-          if (app.id !== appId) return app;
-          receivedCase = app.caseId;
-          return receiveAgreementTransition(app, currentUser.name, nowIso);
-        }),
-      );
+      const updatedApp = receiveAgreementTransition(target, currentUser.name, nowIso);
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast(
         'success',
         'Agreement Received (TERIMA)',
-        `${receivedCase} moved to Agreement Checking queue.`,
+        `${updatedApp.caseId} moved to Agreement Checking queue.`,
       );
     } catch (err) {
       addToast('error', 'TERIMA Failed', err instanceof Error ? err.message : 'Unable to receive.');
@@ -377,18 +505,26 @@ export default function App() {
     invoiceNumber = '',
   ) => {
     const nowIso = new Date().toISOString().slice(0, 19);
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return;
     try {
-      setApplications((prev) =>
-        prev.map((app) =>
-          app.id === appId
-            ? updateCheckingTransition(app, status, checklist, remarks, currentUser.name, nowIso, {
-                staff1,
-                staff2,
-                invoiceNumber,
-              })
-            : app,
-        ),
+      const updatedApp = updateCheckingTransition(
+        target,
+        status,
+        checklist,
+        remarks,
+        currentUser.name,
+        nowIso,
+        {
+          staff1,
+          staff2,
+          invoiceNumber,
+        },
       );
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast(
         status === 'Checking Failed' ? 'warning' : 'success',
         `Agreement ${status}`,
@@ -409,6 +545,8 @@ export default function App() {
     staff2 = '',
     invoiceNumber = '',
   ) => {
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return;
     const nowIso = new Date().toISOString().slice(0, 19);
     const trimmedStaff1 = staff1.trim();
     const trimmedStaff2 = staff2.trim();
@@ -420,32 +558,31 @@ export default function App() {
     ]
       .filter(Boolean)
       .join(', ');
-    setApplications((prev) =>
-      prev.map((app) => {
-        if (app.id !== appId) return app;
-        const evt: ActivityEvent = {
-          id: `evt-${Date.now()}`,
-          caseId: app.caseId,
-          customerName: app.customerName,
-          actionType: 'Information Updated',
-          description: `Checking details saved: ${remarks || 'Checklist updated.'}${staffMeta ? ` (${staffMeta})` : ''}`,
-          staffName: currentUser.name,
-          timestamp: nowIso,
-        };
-        return {
-          ...app,
-          agreement: {
-            ...app.agreement,
-            checkingChecklist: checklist,
-            checkingStaff1: trimmedStaff1,
-            checkingStaff2: trimmedStaff2,
-            invoiceNumber: trimmedInvoice,
-            checkingRemarks: remarks,
-          },
-          timeline: [evt, ...app.timeline],
-        };
-      }),
-    );
+    const evt: ActivityEvent = {
+      id: `evt-${Date.now()}`,
+      caseId: target.caseId,
+      customerName: target.customerName,
+      actionType: 'Information Updated',
+      description: `Checking details saved: ${remarks || 'Checklist updated.'}${staffMeta ? ` (${staffMeta})` : ''}`,
+      staffName: currentUser.name,
+      timestamp: nowIso,
+    };
+    const updatedApp: InstallmentApplication = {
+      ...target,
+      agreement: {
+        ...target.agreement,
+        checkingChecklist: checklist,
+        checkingStaff1: trimmedStaff1,
+        checkingStaff2: trimmedStaff2,
+        invoiceNumber: trimmedInvoice,
+        checkingRemarks: remarks,
+      },
+      timeline: [evt, ...target.timeline],
+    };
+    setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+    if (firebaseUser) {
+      syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+    }
     addToast('info', 'Checking Notes Saved');
   };
 
@@ -466,6 +603,14 @@ export default function App() {
       );
       setApplications(result.applications);
       setSaleSubmissions((prev) => [result.submission, ...prev]);
+      if (firebaseUser) {
+        const uid = firebaseUser.uid;
+        syncToCloud(saveSaleSubmissionToCloud(result.submission, uid));
+        const affectedApps = result.applications.filter((a) =>
+          payload.agreementIds.includes(a.id),
+        );
+        affectedApps.forEach((a) => syncToCloud(saveApplicationToCloud(a, uid)));
+      }
       addToast(
         'success',
         `Submission List ${result.submission.submissionListId} Created`,
@@ -505,21 +650,28 @@ export default function App() {
       updatedBy: currentUser.name,
     };
     setPostageTrackings((prev) => [newRecord, ...prev]);
+    if (firebaseUser) {
+      syncToCloud(savePostageTrackingToCloud(newRecord, firebaseUser.uid));
+    }
     if (payload.saleSubmissionId) {
       const nextSubmissionTaskStatus = mapPostageStatusToTaskSubmission(payload.status);
-      setApplications((prev) =>
-        prev.map((app) =>
-          app.agreement.saleSubmissionId === payload.saleSubmissionId
-            ? {
-                ...app,
-                taskStatus: {
-                  ...deriveTaskStatus(app),
-                  agreementSubmission: nextSubmissionTaskStatus,
-                },
-              }
-            : app,
-        ),
-      );
+      const changedApps = applications
+        .filter((app) => app.agreement.saleSubmissionId === payload.saleSubmissionId)
+        .map((app) => ({
+          ...app,
+          taskStatus: {
+            ...deriveTaskStatus(app),
+            agreementSubmission: nextSubmissionTaskStatus,
+          },
+        }));
+      if (changedApps.length > 0) {
+        const changedMap = new Map(changedApps.map((a) => [a.id, a]));
+        setApplications((prev) => prev.map((app) => changedMap.get(app.id) ?? app));
+        if (firebaseUser) {
+          const uid = firebaseUser.uid;
+          changedApps.forEach((a) => syncToCloud(saveApplicationToCloud(a, uid)));
+        }
+      }
     }
     addToast(
       'success',
@@ -537,34 +689,40 @@ export default function App() {
   ) => {
     const nowIso = new Date().toISOString().slice(0, 19);
     const targetTracking = postageTrackings.find((item) => item.id === trackingId);
-    const updatedTrk = targetTracking?.trackingNumber ?? '';
+    if (!targetTracking) return;
+    const updatedTrk = targetTracking.trackingNumber;
+    const updatedRecord: PostageTrackingRecord = {
+      ...targetTracking,
+      status: payload.status,
+      remarks: payload.remarks,
+      updatedAt: nowIso,
+      updatedBy: currentUser.name,
+    };
     setPostageTrackings((prev) =>
-      prev.map((item) => {
-        if (item.id !== trackingId) return item;
-        return {
-          ...item,
-          status: payload.status,
-          remarks: payload.remarks,
-          updatedAt: nowIso,
-          updatedBy: currentUser.name,
-        };
-      }),
+      prev.map((item) => (item.id === trackingId ? updatedRecord : item)),
     );
-    if (targetTracking?.saleSubmissionId) {
+    if (firebaseUser) {
+      syncToCloud(savePostageTrackingToCloud(updatedRecord, firebaseUser.uid));
+    }
+    if (targetTracking.saleSubmissionId) {
       const nextSubmissionTaskStatus = mapPostageStatusToTaskSubmission(payload.status);
-      setApplications((prev) =>
-        prev.map((app) =>
-          app.agreement.saleSubmissionId === targetTracking.saleSubmissionId
-            ? {
-                ...app,
-                taskStatus: {
-                  ...deriveTaskStatus(app),
-                  agreementSubmission: nextSubmissionTaskStatus,
-                },
-              }
-            : app,
-        ),
-      );
+      const changedApps = applications
+        .filter((app) => app.agreement.saleSubmissionId === targetTracking.saleSubmissionId)
+        .map((app) => ({
+          ...app,
+          taskStatus: {
+            ...deriveTaskStatus(app),
+            agreementSubmission: nextSubmissionTaskStatus,
+          },
+        }));
+      if (changedApps.length > 0) {
+        const changedMap = new Map(changedApps.map((a) => [a.id, a]));
+        setApplications((prev) => prev.map((app) => changedMap.get(app.id) ?? app));
+        if (firebaseUser) {
+          const uid = firebaseUser.uid;
+          changedApps.forEach((a) => syncToCloud(saveApplicationToCloud(a, uid)));
+        }
+      }
     }
     addToast(
       'success',
@@ -581,28 +739,27 @@ export default function App() {
     },
   ): boolean => {
     const nowIso = new Date().toISOString().slice(0, 19);
+    const target = applications.find((a) => a.id === appId);
+    if (!target) return false;
     try {
-      let claimedCase = '';
-      setApplications((prev) =>
-        prev.map((app) => {
-          if (app.id !== appId) return app;
-          claimedCase = app.caseId;
-          return claimAgreementTransition(
-            app,
-            {
-              claimDate: payload.claimDate,
-              claimedBy: currentUser.name,
-              remarks: payload.remarks,
-            },
-            nowIso,
-            postageTrackings,
-          );
-        }),
+      const updatedApp = claimAgreementTransition(
+        target,
+        {
+          claimDate: payload.claimDate,
+          claimedBy: currentUser.name,
+          remarks: payload.remarks,
+        },
+        nowIso,
+        postageTrackings,
       );
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      if (firebaseUser) {
+        syncToCloud(saveApplicationToCloud(updatedApp, firebaseUser.uid));
+      }
       addToast(
         'success',
         'Agreement Claimed',
-        `${claimedCase} marked as Claimed and logged to Activity Timeline.`,
+        `${updatedApp.caseId} marked as Claimed and logged to Activity Timeline.`,
       );
       return true;
     } catch (err) {
@@ -686,11 +843,16 @@ export default function App() {
 
   // User & Settings handlers
   const handleToggleUserStatus = (userId: string) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === userId ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' } : u,
-      ),
-    );
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+    const updated: StaffUser = {
+      ...target,
+      status: target.status === 'Active' ? 'Inactive' : 'Active',
+    };
+    setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+    if (firebaseUser) {
+      syncToCloud(saveStaffUserToCloud(updated, firebaseUser.uid));
+    }
     addToast('info', 'User Account Status Updated');
   };
 
@@ -700,37 +862,57 @@ export default function App() {
   ) => {
     const nowIso = new Date().toISOString().slice(0, 19);
     if (existingId) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === existingId ? { ...u, ...payload } : u)),
-      );
+      const target = users.find((u) => u.id === existingId);
+      if (!target) return;
+      const updated: StaffUser = { ...target, ...payload };
+      setUsers((prev) => prev.map((u) => (u.id === existingId ? updated : u)));
+      if (firebaseUser) {
+        syncToCloud(saveStaffUserToCloud(updated, firebaseUser.uid));
+      }
       addToast('success', 'Staff Account Updated', payload.name);
     } else {
-      setUsers((prev) => [
-        ...prev,
-        { ...payload, id: `usr-${Date.now()}`, lastActive: nowIso },
-      ]);
+      const created: StaffUser = { ...payload, id: `usr-${Date.now()}`, lastActive: nowIso };
+      setUsers((prev) => [...prev, created]);
+      if (firebaseUser) {
+        syncToCloud(saveStaffUserToCloud(created, firebaseUser.uid));
+      }
       addToast('success', 'Staff Account Created', payload.name);
     }
   };
 
+  const handleDeleteUser = (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    if (!target || target.id === currentUser.id) return;
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (firebaseUser) {
+      syncToCloud(deleteStaffUserFromCloud(userId));
+    }
+    addToast('warning', 'Staff Account Deleted', target.name);
+  };
+
   const handleToggleRolePermission = (roleId: string, permission: PermissionKey) => {
-    setRoles((prev) =>
-      prev.map((r) => {
-        if (r.id !== roleId) return r;
-        const exists = r.permissions.includes(permission);
-        return {
-          ...r,
-          permissions: exists
-            ? r.permissions.filter((p) => p !== permission)
-            : [...r.permissions, permission],
-        };
-      }),
-    );
+    const target = roles.find((r) => r.id === roleId);
+    if (!target) return;
+    const exists = target.permissions.includes(permission);
+    const updated: RoleConfig = {
+      ...target,
+      permissions: exists
+        ? target.permissions.filter((p) => p !== permission)
+        : [...target.permissions, permission],
+    };
+    setRoles((prev) => prev.map((r) => (r.id === roleId ? updated : r)));
+    if (firebaseUser) {
+      syncToCloud(saveRoleToCloud(updated, firebaseUser.uid));
+    }
     addToast('info', 'Role Permission Updated');
   };
 
   const handleAddBranch = (branch: Omit<Branch, 'id'>) => {
-    setBranches((prev) => [...prev, { ...branch, id: `br-${Date.now()}` }]);
+    const created: Branch = { ...branch, id: `br-${Date.now()}` };
+    setBranches((prev) => [...prev, created]);
+    if (firebaseUser) {
+      syncToCloud(saveBranchToCloud(created, firebaseUser.uid));
+    }
     addToast('success', 'Branch Added', branch.name);
   };
 
@@ -738,21 +920,43 @@ export default function App() {
     id: string,
     payload: { code: string; name: string; state: string },
   ) => {
-    setBranches((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...payload } : b)),
-    );
+    const target = branches.find((b) => b.id === id);
+    if (!target) return;
+    const updated: Branch = { ...target, ...payload };
+    setBranches((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    if (firebaseUser) {
+      syncToCloud(saveBranchToCloud(updated, firebaseUser.uid));
+    }
     addToast('success', 'Branch Updated', `${payload.code} · ${payload.name}`);
   };
 
   const handleToggleBranch = (id: string) => {
-    setBranches((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, active: !b.active } : b)),
-    );
+    const target = branches.find((b) => b.id === id);
+    if (!target) return;
+    const updated: Branch = { ...target, active: !target.active };
+    setBranches((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    if (firebaseUser) {
+      syncToCloud(saveBranchToCloud(updated, firebaseUser.uid));
+    }
     addToast('info', 'Branch Status Updated');
   };
 
+  const handleDeleteBranch = (id: string) => {
+    const target = branches.find((b) => b.id === id);
+    if (!target) return;
+    setBranches((prev) => prev.filter((b) => b.id !== id));
+    if (firebaseUser) {
+      syncToCloud(deleteBranchFromCloud(id));
+    }
+    addToast('warning', 'Branch Deleted', `${target.code} · ${target.name}`);
+  };
+
   const handleAddCourier = (courier: Omit<Courier, 'id'>) => {
-    setCouriers((prev) => [...prev, { ...courier, id: `cur-${Date.now()}` }]);
+    const created: Courier = { ...courier, id: `cur-${Date.now()}` };
+    setCouriers((prev) => [...prev, created]);
+    if (firebaseUser) {
+      syncToCloud(saveCourierToCloud(created, firebaseUser.uid));
+    }
     addToast('success', 'Courier Added', courier.name);
   };
 
@@ -760,22 +964,60 @@ export default function App() {
     id: string,
     payload: { code: string; name: string; trackingUrl: string },
   ) => {
-    setCouriers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...payload } : c)),
-    );
+    const target = couriers.find((c) => c.id === id);
+    if (!target) return;
+    const updated: Courier = { ...target, ...payload };
+    setCouriers((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    if (firebaseUser) {
+      syncToCloud(saveCourierToCloud(updated, firebaseUser.uid));
+    }
     addToast('success', 'Courier Updated', `${payload.code} · ${payload.name}`);
   };
 
   const handleToggleCourier = (id: string) => {
-    setCouriers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, active: !c.active } : c)),
-    );
+    const target = couriers.find((c) => c.id === id);
+    if (!target) return;
+    const updated: Courier = { ...target, active: !target.active };
+    setCouriers((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    if (firebaseUser) {
+      syncToCloud(saveCourierToCloud(updated, firebaseUser.uid));
+    }
     addToast('info', 'Courier Status Updated');
   };
 
   const handleToggleRoleActive = (id: string) => {
-    setRoles((prev) => prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
+    const target = roles.find((r) => r.id === id);
+    if (!target) return;
+    const updated: RoleConfig = { ...target, active: !target.active };
+    setRoles((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    if (firebaseUser) {
+      syncToCloud(saveRoleToCloud(updated, firebaseUser.uid));
+    }
     addToast('info', 'Role Status Updated');
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      if (firebaseUser) {
+        await clearAllOperationalDataFromCloud(firebaseUser);
+      }
+      setApplications([]);
+      setSaleSubmissions([]);
+      setPostageTrackings([]);
+      setSelectedAppId(null);
+      addToast(
+        'warning',
+        'All Data Cleared',
+        'All applications, sale submissions, and postage tracking records have been permanently deleted.',
+      );
+    } catch (err) {
+      console.error('Clear all data error:', err);
+      addToast(
+        'error',
+        'Database Sync Error',
+        'Unable to clear all cloud database records.',
+      );
+    }
   };
 
   const handleSwitchUser = (userId: string) => {
@@ -801,9 +1043,11 @@ export default function App() {
       return result;
     }
     const nowIso = new Date().toISOString().slice(0, 19);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === result.user.id ? { ...u, lastActive: nowIso } : u)),
-    );
+    const updatedUser: StaffUser = { ...result.user, lastActive: nowIso };
+    setUsers((prev) => prev.map((u) => (u.id === result.user.id ? updatedUser : u)));
+    if (firebaseUser) {
+      syncToCloud(saveStaffUserToCloud(updatedUser, firebaseUser.uid));
+    }
     setCurrentUserId(result.user.id);
     saveAuthUserId(result.user.id, remember);
     setIsAuthenticated(true);
@@ -818,8 +1062,39 @@ export default function App() {
     return result;
   };
 
+  const handleGoogleLogin = async (): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      if (!cred.user.emailVerified) {
+        await signOut(auth);
+        return {
+          ok: false,
+          error: 'Google account email must be verified to sign in.',
+        };
+      }
+      setSelectedAppId(null);
+      setActivePage('dashboard');
+      addToast(
+        'success',
+        `Welcome, ${cred.user.displayName || cred.user.email}`,
+        'Cloud sync enabled.',
+      );
+      return { ok: true };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unable to complete Google sign-in.';
+      return { ok: false, error: message };
+    }
+  };
+
   const handleLogout = () => {
     clearAuthUserId();
+    if (auth.currentUser) {
+      void signOut(auth).catch((err) => {
+        console.error('Sign out error:', err);
+      });
+    }
+    setFirebaseUser(null);
     setIsAuthenticated(false);
     setMobileSidebarOpen(false);
     setSelectedAppId(null);
@@ -839,6 +1114,7 @@ export default function App() {
           saleSubmissions={saleSubmissions}
           recentActivities={recentActivities}
           onNavigate={navigateTo}
+          onOpenCancelledStock={handleOpenCancelledStock}
           onSelectApplication={openApplicationDetails}
         />
       );
@@ -883,6 +1159,8 @@ export default function App() {
           applications={applications}
           branches={branches}
           canManage={hasPermission('manage_stock')}
+          initialDecisionFilter={stockDecisionPreset}
+          initialShowAllMonths={stockShowAllMonths}
           onUpdateStockFollowUp={handleUpdateStockFollowUp}
           onPassStockToBranch={handlePassStockToBranch}
         />
@@ -1055,6 +1333,20 @@ export default function App() {
       );
     }
 
+    if (activePage === 'backup-data') {
+      if (!hasPermission('view_reports')) {
+        return <ErrorState message="Your role does not have permission to view Backup Data." />;
+      }
+      return (
+        <BackupDataPage
+          applications={applications}
+          branches={branches}
+          defaultPageSize={systemPrefs.defaultPageSize}
+          onExportCsv={handleExportCsv}
+        />
+      );
+    }
+
     if (activePage === 'user-permissions') {
       if (!hasPermission('manage_users')) {
         return <ErrorState message="Your role does not have permission to manage Users & Permissions." />;
@@ -1064,8 +1356,10 @@ export default function App() {
           users={users}
           roles={roles}
           branches={branches}
+          currentUserId={currentUser.id}
           onToggleUserStatus={handleToggleUserStatus}
           onSaveUser={handleSaveUser}
+          onDeleteUser={handleDeleteUser}
           onToggleRolePermission={handleToggleRolePermission}
         />
       );
@@ -1084,6 +1378,7 @@ export default function App() {
         onAddBranch={handleAddBranch}
         onUpdateBranch={handleUpdateBranch}
         onToggleBranch={handleToggleBranch}
+        onDeleteBranch={handleDeleteBranch}
         onAddCourier={handleAddCourier}
         onUpdateCourier={handleUpdateCourier}
         onToggleCourier={handleToggleCourier}
@@ -1091,12 +1386,19 @@ export default function App() {
         onToggleRolePermission={handleToggleRolePermission}
         onUpdateNotifications={(prefs) => {
           setNotifications(prefs);
+          if (firebaseUser) {
+            syncToCloud(saveSettingsToCloud(prefs, systemPrefs, firebaseUser.uid));
+          }
           addToast('success', 'Notification Preferences Saved');
         }}
         onUpdateSystemPrefs={(prefs) => {
           setSystemPrefs(prefs);
+          if (firebaseUser) {
+            syncToCloud(saveSettingsToCloud(notifications, prefs, firebaseUser.uid));
+          }
           addToast('success', 'System Preferences Saved');
         }}
+        onClearAllData={handleClearAllData}
       />
     );
   };
@@ -1109,6 +1411,7 @@ export default function App() {
           roles={roles}
           branches={branches}
           onLogin={handleLogin}
+          onGoogleLogin={handleGoogleLogin}
         />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>

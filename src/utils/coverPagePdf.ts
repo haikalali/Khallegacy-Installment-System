@@ -3,7 +3,7 @@ import type { Branch, InstallmentApplication, StaffUser } from '../types/khalleg
 import { formatDateShort, formatRM, resolveApplicationCategory } from './businessRules';
 
 const COVER_PAGE_TEMPLATE_URL =
-  '/assets/aistudio/COVER_PAGE_JCL_2026_-_COVER_PAGE_88_21474ba8.pdf';
+  '/assets/aistudio/COVER_PAGE_JCL_2026_-_COVER_PAGE_88_d5c75839.pdf';
 
 const STREAM_SCALE = 0.75 * 0.66157967;
 const STREAM_TX = 101.57507;
@@ -187,7 +187,9 @@ export function buildFallbackCoverPagePdfBlob(
     { text: `TEMPOH            : ${app.financing.installmentDuration} bulan`, size: 10 },
     { text: `BULANAN           : RM ${formatCoverAmount(app.financing.monthlyInstallment)}`, size: 10 },
     { text: `JUMLAH            : RM ${formatCoverAmount(app.financing.totalProductPrice)}`, size: 10 },
-    { text: `AGREEMENT FEE     : RM ${formatCoverAmount(app.financing.agreementFee)}`, size: 10, gapAfter: 10 },
+    { text: `AGREEMENT FEE     : RM ${formatCoverAmount(app.financing.agreementFee)}`, size: 10, gapAfter: 8 },
+    { text: `NAMA BANK         : ${app.bankName?.trim() || '-'}`, size: 10 },
+    { text: `NO AKAUN          : ${app.bankAccountNumber?.trim() || '-'}`, size: 10, gapAfter: 10 },
     ...wrapText(`Remarks           : ${app.applicationRemarks || '-'}`, 78).map((l) => ({
       text: l,
       size: 10,
@@ -315,6 +317,28 @@ export async function buildCoverPagePdfBlob(
         fontSize: BODY_FONT_SIZE,
         maxWidth: 282,
         color: field.color ?? blackColor,
+      });
+    }
+
+    // Page 1 — Repayment Bank Details (aligned at stream x=242.0, matching J-CLicks)
+    const p1BankFields: { ys: number; text: string }[] = [
+      { ys: 518.0597, text: app.bankName?.trim() || '-' },
+      { ys: 544.0597, text: app.bankAccountNumber?.trim() || '-' },
+    ];
+
+    for (const field of p1BankFields) {
+      const pos = toPage1Point(242.0, field.ys);
+      drawMaskedField({
+        page: page1,
+        font: fontRegular,
+        text: field.text,
+        x: pos.x,
+        y: pos.y,
+        maskX: pos.x - 3.5,
+        maskWidth: 390,
+        fontSize: BODY_FONT_SIZE,
+        maxWidth: 378,
+        color: blackColor,
       });
     }
 
