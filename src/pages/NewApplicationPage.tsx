@@ -30,6 +30,7 @@ interface NewApplicationPageProps {
   currentUser: StaffUser;
   onCreateApplication: (payload: NewApplicationPayload, downloadCoverPage: boolean) => boolean | Promise<boolean>;
   onNavigateApprovalList: () => void;
+  isSaving?: boolean;
 }
 
 const createInitialProductRow = (): ProductDraft => ({
@@ -46,6 +47,7 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
   currentUser,
   onCreateApplication,
   onNavigateApprovalList,
+  isSaving = false,
 }) => {
   const [caseId, setCaseId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -1275,10 +1277,11 @@ export const NewApplicationPage: React.FC<NewApplicationPageProps> = ({
             {/* Primary Save & Download CTA */}
             <button
               type="submit"
+              disabled={isSaving}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-semibold tracking-wide text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors"
             >
               <Download className="w-4 h-4 shrink-0" />
-              <span>SAVE APPLICATION &amp; DOWNLOAD COVER PAGE</span>
+              <span>{isSaving ? 'SAVING APPLICATION...' : 'SAVE APPLICATION &amp; DOWNLOAD COVER PAGE'}</span>
             </button>
           </aside>
         </div>
