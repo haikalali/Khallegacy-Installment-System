@@ -118,6 +118,7 @@ export interface Branch {
   name: string;
   state: string;
   active: boolean;
+  branchType?: 'PHYSICAL' | 'POSTAGE' | 'WEB' | 'AGENT';
 }
 
 export interface Courier {
